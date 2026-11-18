@@ -13,8 +13,17 @@ type LocationService = {
 };
 
 export function createHikeLocationLifecycle(location: LocationService) {
+  // Serialize native operations so an end during a permission prompt cannot leave
+  // a service running after the Hike has ended.
+  let pending: Promise<unknown> = Promise.resolve();
+  function enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const result = pending.then(operation, operation);
+    pending = result.catch(() => undefined);
+    return result;
+  }
   return {
-    async start(notification: { title: string; body: string }): Promise<'started' | 'permission-denied'> {
+    start(notification: { title: string; body: string }): Promise<'started' | 'permission-denied'> {
+      return enqueue(async () => {
       if (!(await location.requestForegroundPermissionsAsync()).granted ||
           !(await location.requestBackgroundPermissionsAsync()).granted) return 'permission-denied';
       if (!(await location.hasStartedLocationUpdatesAsync(HIKE_LOCATION_TASK))) {
@@ -23,11 +32,14 @@ export function createHikeLocationLifecycle(location: LocationService) {
         });
       }
       return 'started';
+      });
     },
-    async stop() {
+    stop() {
+      return enqueue(async () => {
       if (await location.hasStartedLocationUpdatesAsync(HIKE_LOCATION_TASK)) {
         await location.stopLocationUpdatesAsync(HIKE_LOCATION_TASK);
       }
+      });
     },
   };
 }

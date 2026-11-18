@@ -1,7 +1,7 @@
 import { useIsFocused } from '@react-navigation/native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import { EmptyState } from '../../shell/EmptyState';
 import { useStrings, useTheme } from '../../settings/preferences';
@@ -28,6 +28,7 @@ import {
 import { useDeviationAlerts } from './deviation/useDeviationAlerts';
 import { processDeviationSample, startDeviationProcessing, type DeviationProcessing } from './deviation/processing';
 import { clearPendingSimulation, endHike, hikeStore, startHike, type RunningHike } from './hikeStore';
+import { hikeLocationLifecycle } from './location/backgroundTask';
 import { useHikerPosition, type HikerPosition } from './location/useHikerPosition';
 import { HikeMap, type HikeMapHandle } from './map/HikeMap';
 import { MapControls } from './map/MapControls';
@@ -244,8 +245,25 @@ function DestinationMap({
         trail: chosen.line,
         ...options,
       });
+      const id = hikeStore.getSnapshot().hike?.id;
+      if (!options.simulated && Platform.OS === 'android' && id != null) {
+        Alert.alert(s.backgroundTitle, s.backgroundRationale, [
+          { text: s.notNow, style: 'cancel', onPress: () => {
+            if (hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
+          } },
+          { text: s.allowLocation, onPress: () => {
+            if (hikeStore.getSnapshot().hike?.id !== id) return;
+            void hikeLocationLifecycle.start({ title: s.backgroundNotificationTitle, body: s.backgroundNotificationBody })
+              .then((result) => {
+                if (result === 'permission-denied' && hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
+              }).catch(() => {
+                if (hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
+              });
+          } },
+        ]);
+      }
     },
-    [entries, pack.destination.id],
+    [entries, pack.destination.id, s],
   );
 
   // tahak://hike/simulate: start the simulated walk on the requested (or first) Trail.

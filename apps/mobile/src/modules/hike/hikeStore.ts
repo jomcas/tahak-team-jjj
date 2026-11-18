@@ -2,7 +2,8 @@
 // can start one before the Hike tab has ever been opened. Also owns the position source:
 // while a simulated walk runs, useHikerPosition reads it instead of the GPS.
 
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
+import { hikeLocationLifecycle } from './location/backgroundTask';
 
 import { createSimulatedWalk, type SimulatedWalk } from './simulate/player';
 import { parseHikeLink, type HikeLink } from './simulate/simLink';
@@ -59,6 +60,7 @@ export function startHike({
   speed?: number;
   startFraction?: number;
 }) {
+  if (state.hike && !state.hike.simulation && Platform.OS === 'android') void hikeLocationLifecycle.stop().catch(() => undefined);
   state.hike?.simulation?.stop();
   const simulation = simulated ? createSimulatedWalk({ trail, trailId, speed, startFraction }) : null;
   simulation?.start();
@@ -70,6 +72,7 @@ export function startHike({
 
 /** Ends the running Hike: stops the simulated walk, if any, and tracking. */
 export function endHike() {
+  if (state.hike && !state.hike.simulation && Platform.OS === 'android') void hikeLocationLifecycle.stop().catch(() => undefined);
   state.hike?.simulation?.stop();
   setState({ hike: null });
 }

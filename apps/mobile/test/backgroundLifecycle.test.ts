@@ -32,3 +32,21 @@ test('denied permission does not start tracking', async () => {
   });
   assert.equal(await service.start({ title: 'Trail', body: 'Tracking' }), 'permission-denied');
 });
+
+test('stop waits for a pending start', async () => {
+  let release!: () => void;
+  const permission = new Promise<void>((resolve) => { release = resolve; });
+  let started = false;
+  const service = createHikeLocationLifecycle({
+    requestForegroundPermissionsAsync: async () => { await permission; return { granted: true }; },
+    requestBackgroundPermissionsAsync: async () => ({ granted: true }),
+    hasStartedLocationUpdatesAsync: async () => started,
+    startLocationUpdatesAsync: async () => { started = true; },
+    stopLocationUpdatesAsync: async () => { started = false; },
+  });
+  const start = service.start({ title: 'Trail', body: 'Tracking' });
+  const stop = service.stop();
+  release();
+  await Promise.all([start, stop]);
+  assert.equal(started, false);
+});
