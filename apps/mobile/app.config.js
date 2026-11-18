@@ -66,10 +66,11 @@ module.exports = {
       [
         'expo-location',
         {
-          // Foreground only: the GPS dot on the Hike map. Android shows its own system dialog;
+          // Android shows its own system dialog;
           // the app explains why first, in the hiker's language.
           locationWhenInUsePermission: 'Tahak uses your location to show where you are on the trail map.',
-          isAndroidBackgroundLocationEnabled: false,
+          isAndroidBackgroundLocationEnabled: true,
+          isAndroidForegroundServiceEnabled: true,
           isIosBackgroundLocationEnabled: false,
         },
       ],
