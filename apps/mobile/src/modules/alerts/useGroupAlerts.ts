@@ -16,7 +16,7 @@ export function memberLabel(member: { name: string; simulated: boolean }, s: { s
 
 /**
  * Posts and clears the "Group Alerts" notifications (with a vibration) as Alerts from other
- * members arrive. Mount once, on the Hike screen.
+ * members arrive. Mount once within the app preferences provider.
  */
 export function useGroupAlertNotifications() {
   const s = useStrings(strings);

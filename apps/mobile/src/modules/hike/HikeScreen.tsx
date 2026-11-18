@@ -15,7 +15,6 @@ import {
   memberStatus,
   removeSimulatedMember,
   SimulatedMemberControls,
-  useGroupAlertNotifications,
   useMembers,
   useSelfAlerts,
   type AlertPosition,
@@ -183,7 +182,6 @@ function DestinationMap({
   useDeviationAlerts(hike?.id ?? null, deviation, taskOwned);
   // Group Hike Alerts (#24): this phone's own Alerts out, other members' Alerts in.
   useSelfAlerts(hike?.id ?? null, deviation, position, taskOwned);
-  useGroupAlertNotifications();
   const sa = useStrings(alertStrings);
   const memberRecords = useMembers();
   const members = useMemo<MapMember[]>(
