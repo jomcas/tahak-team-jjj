@@ -37,7 +37,7 @@ echo "==> Starting local Supabase (the first run downloads a few GB of images)�
 
 # psql inside the database container, so nothing else needs installing. (`supabase db query
 # --local` runs a single statement only.)
-project_id="$(sed -n 's/^project_id = "\(.*\)"$/\1/p' supabase/config.toml)"
+project_id="$(LC_ALL=C sed -n 's/^project_id = "\(.*\)"$/\1/p' supabase/config.toml)"
 psql_local() { docker exec -i "supabase_db_$project_id" psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 "$@"; }
 
 echo "==> Adding the local Admin Portal account…"
@@ -71,8 +71,8 @@ else
 fi
 
 echo "==> Writing app env files…"
-api_url="$("${sb[@]}" status -o env | sed -n 's/^API_URL="\(.*\)"$/\1/p')"
-anon_key="$("${sb[@]}" status -o env | sed -n 's/^ANON_KEY="\(.*\)"$/\1/p')"
+api_url="$("${sb[@]}" status -o env | LC_ALL=C sed -n 's/^API_URL="\(.*\)"$/\1/p')"
+anon_key="$("${sb[@]}" status -o env | LC_ALL=C sed -n 's/^ANON_KEY="\(.*\)"$/\1/p')"
 [[ -n "$api_url" && -n "$anon_key" ]] || { echo "Could not read API_URL / ANON_KEY from 'supabase status'." >&2; exit 1; }
 
 if [[ -z "${MOBILE_HOST:-}" ]]; then
