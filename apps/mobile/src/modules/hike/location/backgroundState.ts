@@ -1,5 +1,4 @@
 import { processDeviationSample, startDeviationProcessing, type DeviationProcessing } from '../deviation/processing.ts';
-import type { DeviationEvent } from '../deviation/detector.ts';
 import { prepareTrail, type LngLat } from '../trail/geometry.ts';
 
 export type Storage = { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<unknown>; removeItem(key: string): Promise<unknown> };
@@ -33,7 +32,7 @@ export function createBackgroundStateProcessor(storage: Storage) {
     process(hikeId: string, samples: readonly Position[]) {
       return serial(async () => {
         const state = await read();
-        const transitions: NonNullable<DeviationEvent>[] = [];
+        const transitions: ({ event: 'started'; position: Position; startedOffM: number } | { event: 'cleared'; position: Position })[] = [];
         if (!state || state.hikeId !== hikeId) return { state, transitions };
         const trail = prepareTrail(state.coordinates);
         if (!trail) throw new Error('Invalid stored trail');
@@ -43,7 +42,8 @@ export function createBackgroundStateProcessor(storage: Storage) {
           if (result.state === state.deviation) continue;
           state.deviation = result.state;
           state.latestPosition = sample;
-          if (result.event) transitions.push(result.event);
+          if (result.event === 'started' && result.state.detector.status === 'deviation') transitions.push({ event: 'started', position: sample, startedOffM: result.state.detector.startedOffM });
+          else if (result.event === 'cleared') transitions.push({ event: 'cleared', position: sample });
         }
         await storage.setItem(KEY, JSON.stringify(state));
         return { state, transitions };

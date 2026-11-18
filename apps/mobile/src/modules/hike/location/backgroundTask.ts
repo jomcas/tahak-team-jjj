@@ -1,3 +1,4 @@
+import { sendAlert } from '../../alerts';
 import { clearDeviationAlert, startDeviationAlert } from '../deviation/alerts';
 import { fill, formatDistance } from '../format';
 import * as Location from 'expo-location';
@@ -26,9 +27,13 @@ TaskManager.defineTask<HikeLocationTaskData>(HIKE_LOCATION_TASK, async ({ data, 
     if (state) {
       const result = await backgroundState.process(state.hikeId, data.locations.map(({ coords, timestamp }) => ({ latitude: coords.latitude, longitude: coords.longitude, timestamp, accuracyM: coords.accuracy ?? undefined })));
       for (const transition of result.transitions) {
-        if (transition === 'cleared') await clearDeviationAlert();
-        else if (result.state?.alertText && result.state.deviation.detector.status === 'deviation') {
-          await startDeviationAlert({ title: result.state.alertText.title, body: fill(result.state.alertText.body, { distance: formatDistance(result.state.deviation.detector.startedOffM) }) });
+        const { latitude, longitude, timestamp } = transition.position;
+        if (transition.event === 'cleared') {
+          sendAlert('deviation-cleared', { latitude, longitude }, { time: timestamp });
+          await clearDeviationAlert();
+        } else {
+          sendAlert('deviation', { latitude, longitude }, { time: timestamp, offTrailM: transition.startedOffM });
+          if (result.state?.alertText) await startDeviationAlert({ title: result.state.alertText.title, body: fill(result.state.alertText.body, { distance: formatDistance(transition.startedOffM) }) });
         }
       }
       snapshot = result.state;

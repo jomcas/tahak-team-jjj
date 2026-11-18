@@ -14,8 +14,20 @@ test('persists ordered samples across restart and ignores late samples and stale
   const result = await second.process('one', [sample(30_101), sample(99)]);
   assert.equal(result.state?.latestPosition?.timestamp, 30_101);
   assert.equal(result.state?.deviation.detector.status, 'deviation');
-  assert.deepEqual(result.transitions, ['started']);
+  assert.equal(result.transitions[0]?.event, 'started');
   assert.equal(await second.close('old'), false);
   assert.equal(await second.close('one'), true);
   assert.equal((await second.process('one', [sample(30_102)])).state, null);
+});
+
+test('preserves both transitions and their samples in a single batch', async () => {
+  const map = new Map<string, string>();
+  const storage = { async getItem(k: string) { return map.get(k) ?? null; }, async setItem(k: string, v: string) { map.set(k, v); }, async removeItem(k: string) { map.delete(k); } };
+  const processor = createBackgroundStateProcessor(storage);
+  await processor.open('hike', 0, [[0, 0], [0, 0.01]]);
+  const off = (timestamp: number) => ({ latitude: 0.001, longitude: 0.001, timestamp });
+  const back = { latitude: 0.001, longitude: 0, timestamp: 31000 };
+  const result = await processor.process('hike', [off(1), off(15000), off(30002), back]);
+  assert.deepEqual(result.transitions.map(t => [t.event, t.position.timestamp]), [['started', 30002], ['cleared', 31000]]);
+  assert.ok(result.transitions[0]?.event === 'started' && result.transitions[0].startedOffM > 40);
 });

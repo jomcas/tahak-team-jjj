@@ -182,7 +182,7 @@ function DestinationMap({
   const { view, deviation, offTrailM, dismiss } = useHikeTracking(hike?.id ?? null, entry, position, matchingTask?.deviation ?? null, taskOwned);
   useDeviationAlerts(hike?.id ?? null, deviation, taskOwned);
   // Group Hike Alerts (#24): this phone's own Alerts out, other members' Alerts in.
-  useSelfAlerts(hike?.id ?? null, deviation, position);
+  useSelfAlerts(hike?.id ?? null, deviation, position, taskOwned);
   useGroupAlertNotifications();
   const sa = useStrings(alertStrings);
   const memberRecords = useMembers();

@@ -70,6 +70,7 @@ export function useSelfAlerts(
   hikeId: number | null,
   deviation: { startedMs: number; startedOffM: number } | null,
   position: (AlertPosition & { timestamp: number }) | null,
+  taskOwned = false,
 ) {
   const where = useRef(position);
   useEffect(() => {
@@ -79,7 +80,7 @@ export function useSelfAlerts(
   const startedMs = deviation?.startedMs ?? null;
   const startedOffM = deviation?.startedOffM;
   useEffect(() => {
-    if (hikeId === null || startedMs === null) return;
+    if (hikeId === null || startedMs === null || taskOwned) return;
     const at = where.current;
     if (at) sendAlert('deviation', toPosition(at), { offTrailM: startedOffM, time: startedMs });
     return () => {
@@ -88,7 +89,7 @@ export function useSelfAlerts(
     };
     // startedOffM belongs to the Deviation that startedMs names.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hikeId, startedMs]);
+  }, [hikeId, startedMs, taskOwned]);
 
   const flare = useFlareActive();
   useEffect(() => {
