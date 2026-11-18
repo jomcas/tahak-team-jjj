@@ -4,8 +4,12 @@
 
 import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { useEffect, useRef, useState } from 'react';
 import type { LngLat } from '../lib/types';
+
+// Keep the worker URL valid after Vite prebundles MapLibre in development.
+maplibregl.setWorkerUrl(workerUrl);
 
 export type MapLine = { id: string; coordinates: LngLat[]; preview?: boolean };
 export type MapPoint = { id: string; position: LngLat; label: string; kind: string; selected?: boolean; title?: string };
@@ -71,7 +75,7 @@ export function TrailMap({
   useEffect(() => {
     const instance = new maplibregl.Map({ container: container.current!, style: STYLE, center, zoom: 13 });
     instance.addControl(new maplibregl.NavigationControl({ showCompass: false }));
-    instance.on('load', () => setReady(true));
+    instance.on('style.load', () => setReady(true));
     instance.on('click', (event) => clickHandler.current?.([event.lngLat.lng, event.lngLat.lat]));
     map.current = instance;
     return () => {
