@@ -21,3 +21,20 @@ test('background links are explicit and bounded', async () => {
   assert.equal((parseHikeLink('tahak://hike/simulate?background=1&delay=9999') as any).backgroundDelay, 3600);
   assert.equal((parseHikeLink('tahak://hike/simulate?background=0') as any).backgroundDelay, undefined);
 });
+
+test('a sampled Trail produces a Deviation after the requested delay', async () => {
+  const { prepareTrail } = await import('../src/modules/hike/trail/geometry.ts');
+  const { buildBenchTimeline } = await import('../src/modules/hike/simulate/benchSample.ts');
+  const { createBackgroundStateProcessor } = await import('../src/modules/hike/location/backgroundState.ts');
+  const trail = prepareTrail([[120, 14], [120.001, 14]])!;
+  let stored: string | null = null;
+  const processor = createBackgroundStateProcessor({ getItem: async () => stored, setItem: async (_key, value) => { stored = value; }, removeItem: async () => { stored = null; } });
+  const delay = 360;
+  await processor.open('bench', 1000, trail.coordinates, undefined, buildBenchTimeline(trail, 1000, delay));
+  let startedAt: number | null = null;
+  for (let seconds = 0; seconds < delay + 100; seconds++) {
+    const result = await processor.process('bench', [{ latitude: 0, longitude: 0, timestamp: 1000 + seconds * 1000 }]);
+    if (result.transitions.some((transition) => transition.event === 'started')) { startedAt = seconds; break; }
+  }
+  assert.ok(startedAt !== null && startedAt > delay);
+});

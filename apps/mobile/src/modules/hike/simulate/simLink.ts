@@ -3,6 +3,8 @@
 //   tahak://hike/simulate?trail=<id>&speed=<n>&at=<0..1>
 //       Starts a simulated walk Hike (ending any running Hike first). trail defaults to the
 //       first Trail, speed to 15 (1 to 120), at (where in the script to start) to 0.
+//       On Android development builds, background=1 opts into the service bench; delay is
+//       seconds before the excursion (default 360, clamped to 1..3600).
 //   tahak://hike/simulate/off-trail
 //       Sends the running simulated walk 60 m off the Trail for 45 s now (#8's Deviation).
 //   tahak://hike/end

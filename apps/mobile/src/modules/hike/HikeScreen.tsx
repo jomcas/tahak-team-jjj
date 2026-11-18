@@ -1,3 +1,4 @@
+import { buildBenchTimeline } from './simulate/benchSample';
 import { useIsFocused } from '@react-navigation/native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -241,7 +242,7 @@ function DestinationMap({
   }, [notice]);
 
   const start = useCallback(
-    (trailId: string | null, options: { simulated: boolean; speed?: number; startFraction?: number }) => {
+    (trailId: string | null, options: { simulated: boolean; speed?: number; startFraction?: number; backgroundDelay?: number }) => {
       const chosen = trailId ? entries.get(trailId) : undefined;
       if (!chosen) return;
       startHike({
@@ -251,7 +252,7 @@ function DestinationMap({
         ...options,
       });
       const id = hikeStore.getSnapshot().hike?.id;
-      if (!options.simulated && Platform.OS === 'android' && id != null) {
+      if ((!options.simulated || options.backgroundDelay !== undefined) && Platform.OS === 'android' && id != null) {
         Alert.alert(s.backgroundTitle, s.backgroundRationale, [
           { text: s.notNow, style: 'cancel', onPress: () => {
             if (hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
@@ -260,7 +261,7 @@ function DestinationMap({
             if (hikeStore.getSnapshot().hike?.id !== id) return;
             const active = hikeStore.getSnapshot().hike;
             if (!active || active.id !== id) return;
-            void backgroundState.open(String(active.startedAt), active.startedAt, chosen.line.coordinates, { title: s.deviationNotificationTitle, body: s.deviationNotificationBody })
+            void backgroundState.open(String(active.startedAt), active.startedAt, chosen.line.coordinates, { title: s.deviationNotificationTitle, body: s.deviationNotificationBody }, options.backgroundDelay !== undefined ? buildBenchTimeline(chosen.line, active.startedAt, options.backgroundDelay) : undefined)
               .then(() => hikeStore.getSnapshot().hike?.id === id
                 ? hikeLocationLifecycle.start({ title: s.backgroundNotificationTitle, body: s.backgroundNotificationBody })
                 : 'permission-denied' as const)
@@ -286,6 +287,7 @@ function DestinationMap({
         simulated: true,
         speed: pendingSimulation.speed,
         startFraction: pendingSimulation.startFraction,
+        backgroundDelay: __DEV__ && Platform.OS === 'android' ? pendingSimulation.backgroundDelay : undefined,
       });
     } else {
       clearPendingSimulation();

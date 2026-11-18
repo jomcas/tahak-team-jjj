@@ -20,5 +20,8 @@ export function benchSampleAt(timeline: BenchTimeline, timestamp: number) {
 
 export function buildBenchTimeline(trail: PreparedTrail, startedAt: number, delay: number): BenchTimeline {
   const walk = buildSimulatedWalk(trail, { excursions: false });
-  return { startedAt, speed: 1, samples: insertExcursion(trail, walk, delay, 'long').samples };
+  // Hold at the end of short Trails until the requested excursion time.
+  const end = walk[walk.length - 1];
+  const held = end.tS < delay ? [...walk, { ...end, tS: delay }] : walk;
+  return { startedAt, speed: 1, samples: insertExcursion(trail, held, delay, 'long').samples };
 }

@@ -17,6 +17,7 @@ export type RunningHike = {
   trailId: string;
   /** The positions come from a simulated walk, not the GPS. */
   simulation: SimulatedWalk | null;
+  backgroundBench: boolean;
   startedAt: number;
 };
 
@@ -53,6 +54,7 @@ export function startHike({
   simulated,
   speed,
   startFraction,
+  backgroundDelay,
 }: {
   destinationId: string;
   trailId: string;
@@ -60,8 +62,9 @@ export function startHike({
   simulated: boolean;
   speed?: number;
   startFraction?: number;
+  backgroundDelay?: number;
 }) {
-  if (state.hike && !state.hike.simulation && Platform.OS === 'android') {
+  if (state.hike && (!state.hike.simulation || state.hike.backgroundBench) && Platform.OS === 'android') {
     void hikeLocationLifecycle.stop().catch(() => undefined);
     const backgroundHikeId = String(state.hike.startedAt);
     void endBackgroundHike(backgroundHikeId).catch(() => undefined);
@@ -70,14 +73,14 @@ export function startHike({
   const simulation = simulated ? createSimulatedWalk({ trail, trailId, speed, startFraction }) : null;
   simulation?.start();
   setState({
-    hike: { id: nextId++, destinationId, trailId, simulation, startedAt: Date.now() },
+    hike: { id: nextId++, destinationId, trailId, simulation, backgroundBench: backgroundDelay !== undefined, startedAt: Date.now() },
     pendingSimulation: null,
   });
 }
 
 /** Ends the running Hike: stops the simulated walk, if any, and tracking. */
 export function endHike() {
-  if (state.hike && !state.hike.simulation && Platform.OS === 'android') {
+  if (state.hike && (!state.hike.simulation || state.hike.backgroundBench) && Platform.OS === 'android') {
     void hikeLocationLifecycle.stop().catch(() => undefined);
     const backgroundHikeId = String(state.hike.startedAt);
     void endBackgroundHike(backgroundHikeId).catch(() => undefined);
