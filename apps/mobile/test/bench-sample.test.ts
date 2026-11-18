@@ -14,3 +14,10 @@ test('callback time samples a persisted timeline and preserves real timestamps',
   assert.equal(benchSampleAt(timeline, 999), null);
   assert.equal(benchSampleAt({ ...timeline, speed: 0 }, 3500), null);
 });
+
+test('background links are explicit and bounded', async () => {
+  const { parseHikeLink } = await import('../src/modules/hike/simulate/simLink.ts');
+  assert.equal((parseHikeLink('tahak://hike/simulate?background=1') as any).backgroundDelay, 360);
+  assert.equal((parseHikeLink('tahak://hike/simulate?background=1&delay=9999') as any).backgroundDelay, 3600);
+  assert.equal((parseHikeLink('tahak://hike/simulate?background=0') as any).backgroundDelay, undefined);
+});

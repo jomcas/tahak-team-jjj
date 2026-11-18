@@ -1,4 +1,5 @@
-import { sampleAt, walkDurationS, type WalkSample } from './walkScript.ts';
+import type { PreparedTrail } from '../trail/geometry.ts';
+import { buildSimulatedWalk, insertExcursion, sampleAt, walkDurationS, type WalkSample } from './walkScript.ts';
 
 /** Persist this clock with the script so a native task can sample it after a restart. */
 export type BenchTimeline = {
@@ -15,4 +16,9 @@ export function benchSampleAt(timeline: BenchTimeline, timestamp: number) {
   const tS = Math.min(walkDurationS(timeline.samples), (timestamp - timeline.startedAt) / 1000 * timeline.speed);
   const sample = sampleAt(timeline.samples, tS);
   return { latitude: sample.latitude, longitude: sample.longitude, accuracyM: 5, timestamp };
+}
+
+export function buildBenchTimeline(trail: PreparedTrail, startedAt: number, delay: number): BenchTimeline {
+  const walk = buildSimulatedWalk(trail, { excursions: false });
+  return { startedAt, speed: 1, samples: insertExcursion(trail, walk, delay, 'long').samples };
 }

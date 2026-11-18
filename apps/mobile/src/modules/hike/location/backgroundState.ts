@@ -1,9 +1,10 @@
+import { benchSampleAt, type BenchTimeline } from '../simulate/benchSample.ts';
 import { processDeviationSample, startDeviationProcessing, type DeviationProcessing } from '../deviation/processing.ts';
 import { prepareTrail, type LngLat } from '../trail/geometry.ts';
 
 export type Storage = { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<unknown>; removeItem(key: string): Promise<unknown> };
 export type Position = { latitude: number; longitude: number; timestamp: number; accuracyM?: number };
-export type BackgroundState = { hikeId: string; startedAt: number; coordinates: readonly LngLat[]; latestPosition: Position | null; deviation: DeviationProcessing; alertText?: { title: string; body: string } };
+export type BackgroundState = { hikeId: string; startedAt: number; coordinates: readonly LngLat[]; latestPosition: Position | null; deviation: DeviationProcessing; alertText?: { title: string; body: string }; bench?: BenchTimeline };
 const KEY = 'hike.backgroundState';
 
 /** Serializes all operations for this processor, including recovery after a storage failure. */
@@ -19,11 +20,11 @@ export function createBackgroundStateProcessor(storage: Storage) {
     return value === null ? null : JSON.parse(value) as BackgroundState;
   }
   return {
-    open(hikeId: string, startedAt: number, coordinates: readonly LngLat[], alertText?: { title: string; body: string }) {
+    open(hikeId: string, startedAt: number, coordinates: readonly LngLat[], alertText?: { title: string; body: string }, bench?: BenchTimeline) {
       return serial(async () => {
         const trail = prepareTrail(coordinates);
         if (!trail || !hikeId || !Number.isFinite(startedAt)) throw new Error('Invalid hike');
-        const state: BackgroundState = { hikeId, startedAt, coordinates: trail.coordinates, latestPosition: null, deviation: startDeviationProcessing(), alertText };
+        const state: BackgroundState = { hikeId, startedAt, coordinates: trail.coordinates, latestPosition: null, deviation: startDeviationProcessing(), alertText, bench };
         await storage.setItem(KEY, JSON.stringify(state));
         return state;
       });
@@ -36,7 +37,9 @@ export function createBackgroundStateProcessor(storage: Storage) {
         if (!state || state.hikeId !== hikeId) return { state, transitions };
         const trail = prepareTrail(state.coordinates);
         if (!trail) throw new Error('Invalid stored trail');
-        for (const sample of samples) {
+        for (const nativeSample of samples) {
+          const sample = state.bench ? benchSampleAt(state.bench, nativeSample.timestamp) : nativeSample;
+          if (!sample) continue;
           if (!Number.isFinite(sample.timestamp) || !Number.isFinite(sample.latitude) || !Number.isFinite(sample.longitude) || sample.timestamp < state.startedAt || (state.latestPosition && sample.timestamp <= state.latestPosition.timestamp)) continue;
           const result = processDeviationSample(state.deviation, trail, sample);
           if (result.state === state.deviation) continue;

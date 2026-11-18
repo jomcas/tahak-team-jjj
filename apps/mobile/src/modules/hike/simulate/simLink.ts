@@ -13,7 +13,7 @@ export const DEFAULT_SPEED = SPEEDS[0];
 const MAX_SPEED = 120;
 
 export type HikeLink =
-  | { action: 'simulate'; trailId: string | null; speed: number; startFraction: number }
+  | { action: 'simulate'; trailId: string | null; speed: number; startFraction: number; backgroundDelay?: number }
   | { action: 'off-trail' }
   | { action: 'end' };
 
@@ -35,6 +35,7 @@ export function parseHikeLink(url: string | null): HikeLink | null {
         trailId: param('trail') || null,
         speed: Number.isFinite(speed) && speed >= 1 ? Math.min(MAX_SPEED, speed) : DEFAULT_SPEED,
         startFraction: Number.isFinite(at) ? Math.max(0, Math.min(1, at)) : 0,
+        ...(param('background') === '1' ? { backgroundDelay: Math.max(1, Math.min(3600, Number(param('delay')) || 360)) } : {}),
       };
     }
     case 'simulate/off-trail':

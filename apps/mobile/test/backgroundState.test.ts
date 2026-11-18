@@ -31,3 +31,19 @@ test('preserves both transitions and their samples in a single batch', async () 
   assert.deepEqual(result.transitions.map(t => [t.event, t.position.timestamp]), [['started', 30002], ['cleared', 31000]]);
   assert.ok(result.transitions[0]?.event === 'started' && result.transitions[0].startedOffM > 40);
 });
+
+test('restores bench timeline and uses callback clock instead of native coordinates', async () => {
+  const map = new Map<string, string>();
+  const storage = { async getItem(k: string) { return map.get(k) ?? null; }, async setItem(k: string, v: string) { map.set(k, v); }, async removeItem(k: string) { map.delete(k); } };
+  const { prepareTrail } = await import('../src/modules/hike/trail/geometry.ts');
+  const { buildBenchTimeline } = await import('../src/modules/hike/simulate/benchSample.ts');
+  const trail = prepareTrail([[0, 0], [0, 0.01]])!;
+  await createBackgroundStateProcessor(storage).open('bench', 100, trail.coordinates, undefined, buildBenchTimeline(trail, 100, 360));
+  const restored = createBackgroundStateProcessor(storage);
+  const result = await restored.process('bench', [{ latitude: 50, longitude: 50, timestamp: 100 }]);
+  assert.equal(result.state?.latestPosition?.timestamp, 100);
+  assert.notEqual(result.state?.latestPosition?.latitude, 50);
+  assert.equal(result.state?.bench?.speed, 1);
+  await restored.close('bench');
+  assert.equal(await restored.current(), null);
+});
