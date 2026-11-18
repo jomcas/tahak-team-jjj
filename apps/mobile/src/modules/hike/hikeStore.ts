@@ -4,7 +4,7 @@ import { clearDeviationAlert } from './deviation/alerts';
 // while a simulated walk runs, useHikerPosition reads it instead of the GPS.
 
 import { Linking, Platform } from 'react-native';
-import { backgroundSnapshot, backgroundState, hikeLocationLifecycle } from './location/backgroundTask';
+import { endBackgroundHike, hikeLocationLifecycle } from './location/backgroundTask';
 
 import { createSimulatedWalk, type SimulatedWalk } from './simulate/player';
 import { parseHikeLink, type HikeLink } from './simulate/simLink';
@@ -64,8 +64,7 @@ export function startHike({
   if (state.hike && !state.hike.simulation && Platform.OS === 'android') {
     void hikeLocationLifecycle.stop().catch(() => undefined);
     const backgroundHikeId = String(state.hike.startedAt);
-    backgroundSnapshot.clear(backgroundHikeId);
-    void backgroundState.close(backgroundHikeId).then(() => backgroundSnapshot.clear(backgroundHikeId)).catch(() => undefined);
+    void endBackgroundHike(backgroundHikeId).catch(() => undefined);
   }
   state.hike?.simulation?.stop();
   const simulation = simulated ? createSimulatedWalk({ trail, trailId, speed, startFraction }) : null;
@@ -78,12 +77,12 @@ export function startHike({
 
 /** Ends the running Hike: stops the simulated walk, if any, and tracking. */
 export function endHike() {
-  void clearDeviationAlert();
   if (state.hike && !state.hike.simulation && Platform.OS === 'android') {
     void hikeLocationLifecycle.stop().catch(() => undefined);
     const backgroundHikeId = String(state.hike.startedAt);
-    backgroundSnapshot.clear(backgroundHikeId);
-    void backgroundState.close(backgroundHikeId).then(() => backgroundSnapshot.clear(backgroundHikeId)).catch(() => undefined);
+    void endBackgroundHike(backgroundHikeId).catch(() => undefined);
+  } else {
+    void clearDeviationAlert();
   }
   state.hike?.simulation?.stop();
   setState({ hike: null });
