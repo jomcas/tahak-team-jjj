@@ -4,7 +4,7 @@ import { prepareTrail, type LngLat } from '../trail/geometry.ts';
 
 export type Storage = { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<unknown>; removeItem(key: string): Promise<unknown> };
 export type Position = { latitude: number; longitude: number; timestamp: number; accuracyM?: number };
-export type BackgroundState = { hikeId: string; startedAt: number; coordinates: readonly LngLat[]; latestPosition: Position | null; deviation: DeviationProcessing };
+export type BackgroundState = { hikeId: string; startedAt: number; coordinates: readonly LngLat[]; latestPosition: Position | null; deviation: DeviationProcessing; alertText?: { title: string; body: string } };
 const KEY = 'hike.backgroundState';
 
 /** Serializes all operations for this processor, including recovery after a storage failure. */
@@ -20,11 +20,11 @@ export function createBackgroundStateProcessor(storage: Storage) {
     return value === null ? null : JSON.parse(value) as BackgroundState;
   }
   return {
-    open(hikeId: string, startedAt: number, coordinates: readonly LngLat[]) {
+    open(hikeId: string, startedAt: number, coordinates: readonly LngLat[], alertText?: { title: string; body: string }) {
       return serial(async () => {
         const trail = prepareTrail(coordinates);
         if (!trail || !hikeId || !Number.isFinite(startedAt)) throw new Error('Invalid hike');
-        const state: BackgroundState = { hikeId, startedAt, coordinates: trail.coordinates, latestPosition: null, deviation: startDeviationProcessing() };
+        const state: BackgroundState = { hikeId, startedAt, coordinates: trail.coordinates, latestPosition: null, deviation: startDeviationProcessing(), alertText };
         await storage.setItem(KEY, JSON.stringify(state));
         return state;
       });

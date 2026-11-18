@@ -1,3 +1,4 @@
+import { clearDeviationAlert } from './deviation/alerts';
 // The running Hike, if any, kept outside React so it survives tab switches and a deep link
 // can start one before the Hike tab has ever been opened. Also owns the position source:
 // while a simulated walk runs, useHikerPosition reads it instead of the GPS.
@@ -77,6 +78,7 @@ export function startHike({
 
 /** Ends the running Hike: stops the simulated walk, if any, and tracking. */
 export function endHike() {
+  void clearDeviationAlert();
   if (state.hike && !state.hike.simulation && Platform.OS === 'android') {
     void hikeLocationLifecycle.stop().catch(() => undefined);
     const backgroundHikeId = String(state.hike.startedAt);

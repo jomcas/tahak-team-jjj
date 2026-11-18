@@ -169,18 +169,18 @@ function DestinationMap({
     anyHike && anyHike.destinationId === pack.destination.id && entries.has(anyHike.trailId) ? anyHike : null;
   const entry = hike ? (entries.get(hike.trailId) ?? null) : null;
 
+  const [serviceHikeId, setServiceHikeId] = useState<number | null>(null);
+  const taskOwned = hike !== null && serviceHikeId === hike.id;
   // The GPS runs while the Hike tab is in use or a Hike is running, never otherwise.
   const { permission, position: foregroundPosition, source, requestPermission, retry } = useHikerPosition({
-    gps: focused || hike !== null,
+    gps: !taskOwned && (focused || hike !== null),
   });
-  const [serviceHikeId, setServiceHikeId] = useState<number | null>(null);
   const taskState = useSyncExternalStore(backgroundSnapshot.subscribe, backgroundSnapshot.getSnapshot);
-  const taskOwned = hike !== null && serviceHikeId === hike.id;
   const matchingTask = taskOwned && taskState?.hikeId === String(hike.startedAt) ? taskState : null;
   const taskPosition = matchingTask?.latestPosition;
   const position = useMemo(() => taskOwned ? (taskPosition ? { ...taskPosition, accuracyM: taskPosition.accuracyM ?? null } : null) : foregroundPosition, [taskOwned, taskPosition, foregroundPosition]);
   const { view, deviation, offTrailM, dismiss } = useHikeTracking(hike?.id ?? null, entry, position, matchingTask?.deviation ?? null, taskOwned);
-  useDeviationAlerts(hike?.id ?? null, deviation);
+  useDeviationAlerts(hike?.id ?? null, deviation, taskOwned);
   // Group Hike Alerts (#24): this phone's own Alerts out, other members' Alerts in.
   useSelfAlerts(hike?.id ?? null, deviation, position);
   useGroupAlertNotifications();
@@ -262,7 +262,7 @@ function DestinationMap({
             if (hikeStore.getSnapshot().hike?.id !== id) return;
             const active = hikeStore.getSnapshot().hike;
             if (!active || active.id !== id) return;
-            void backgroundState.open(String(active.startedAt), active.startedAt, chosen.line.coordinates)
+            void backgroundState.open(String(active.startedAt), active.startedAt, chosen.line.coordinates, { title: s.deviationNotificationTitle, body: s.deviationNotificationBody })
               .then(() => hikeStore.getSnapshot().hike?.id === id
                 ? hikeLocationLifecycle.start({ title: s.backgroundNotificationTitle, body: s.backgroundNotificationBody })
                 : 'permission-denied' as const)
