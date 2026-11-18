@@ -28,7 +28,7 @@ import {
 import { useDeviationAlerts } from './deviation/useDeviationAlerts';
 import { processDeviationSample, startDeviationProcessing, type DeviationProcessing } from './deviation/processing';
 import { clearPendingSimulation, endHike, hikeStore, startHike, type RunningHike } from './hikeStore';
-import { backgroundState, hikeLocationLifecycle } from './location/backgroundTask';
+import { backgroundSnapshot, backgroundState, hikeLocationLifecycle } from './location/backgroundTask';
 import { useHikerPosition, type HikerPosition } from './location/useHikerPosition';
 import { HikeMap, type HikeMapHandle } from './map/HikeMap';
 import { MapControls } from './map/MapControls';
@@ -88,7 +88,7 @@ type DeviationView = {
  * The running Hike's progress and Deviation: one tracker and one Deviation detector per Hike,
  * fed every new position.
  */
-function useHikeTracking(hikeId: number | null, entry: TrailEntry | null, position: HikerPosition | null) {
+function useHikeTracking(hikeId: number | null, entry: TrailEntry | null, position: HikerPosition | null, taskProcessing: DeviationProcessing | null, taskOwned: boolean) {
   type Tracked = {
     hikeId: number;
     position: HikerPosition;
@@ -111,10 +111,10 @@ function useHikeTracking(hikeId: number | null, entry: TrailEntry | null, positi
     const result = trackPosition(tracker, entry.line, entry.placed, position);
     // The Deviation is measured to the nearest point of the whole Trail. The progress view's
     // location prefers the leg the hiker was on, which near a switchback can be further away.
-    const processing = processDeviationSample(
+    const processing = taskOwned ? taskProcessing : processDeviationSample(
       same ? state.processing : startDeviationProcessing(), entry.line, position,
     ).state;
-    if (result && processing.toTrail) {
+    if (result && processing?.toTrail) {
       setState({ hikeId, position, ...result, processing });
     }
   }
@@ -140,13 +140,14 @@ function useHikeTracking(hikeId: number | null, entry: TrailEntry | null, positi
     );
   }, [current, entry]);
   useEffect(() => () => publishLiveHike(null), []);
-  const detector = current?.processing.detector;
+  const processing = taskOwned ? taskProcessing : current?.processing;
+  const detector = processing?.detector;
   const deviation: DeviationView | null =
-    current && current.processing.toTrail && detector && isDeviation(detector)
-      ? { startedMs: detector.startedMs, startedOffM: detector.startedOffM, toTrail: current.processing.toTrail }
+    processing?.toTrail && detector && isDeviation(detector)
+      ? { startedMs: detector.startedMs, startedOffM: detector.startedOffM, toTrail: processing.toTrail }
       : null;
   // The simulation bar shows the same distance the Deviation is measured on.
-  const offTrailM = current?.processing.toTrail?.offTrailM ?? null;
+  const offTrailM = processing?.toTrail?.offTrailM ?? null;
   return { view: current?.view ?? null, deviation, offTrailM, dismiss };
 }
 
@@ -169,10 +170,16 @@ function DestinationMap({
   const entry = hike ? (entries.get(hike.trailId) ?? null) : null;
 
   // The GPS runs while the Hike tab is in use or a Hike is running, never otherwise.
-  const { permission, position, source, requestPermission, retry } = useHikerPosition({
+  const { permission, position: foregroundPosition, source, requestPermission, retry } = useHikerPosition({
     gps: focused || hike !== null,
   });
-  const { view, deviation, offTrailM, dismiss } = useHikeTracking(hike?.id ?? null, entry, position);
+  const [serviceHikeId, setServiceHikeId] = useState<number | null>(null);
+  const taskState = useSyncExternalStore(backgroundSnapshot.subscribe, backgroundSnapshot.getSnapshot);
+  const taskOwned = hike !== null && serviceHikeId === hike.id;
+  const matchingTask = taskOwned && taskState?.hikeId === String(hike.startedAt) ? taskState : null;
+  const taskPosition = matchingTask?.latestPosition;
+  const position = useMemo(() => taskOwned ? (taskPosition ? { ...taskPosition, accuracyM: taskPosition.accuracyM ?? null } : null) : foregroundPosition, [taskOwned, taskPosition, foregroundPosition]);
+  const { view, deviation, offTrailM, dismiss } = useHikeTracking(hike?.id ?? null, entry, position, matchingTask?.deviation ?? null, taskOwned);
   useDeviationAlerts(hike?.id ?? null, deviation);
   // Group Hike Alerts (#24): this phone's own Alerts out, other members' Alerts in.
   useSelfAlerts(hike?.id ?? null, deviation, position);
@@ -260,6 +267,7 @@ function DestinationMap({
                 ? hikeLocationLifecycle.start({ title: s.backgroundNotificationTitle, body: s.backgroundNotificationBody })
                 : 'permission-denied' as const)
               .then((result) => {
+                if (result === 'started' && hikeStore.getSnapshot().hike?.id === id) setServiceHikeId(id);
                 if (result === 'permission-denied' && hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
               }).catch(() => {
                 if (hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);

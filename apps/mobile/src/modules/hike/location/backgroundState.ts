@@ -3,7 +3,7 @@ import type { DeviationEvent } from '../deviation/detector.ts';
 import { prepareTrail, type LngLat } from '../trail/geometry.ts';
 
 export type Storage = { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<unknown>; removeItem(key: string): Promise<unknown> };
-export type Position = { latitude: number; longitude: number; timestamp: number };
+export type Position = { latitude: number; longitude: number; timestamp: number; accuracyM?: number };
 export type BackgroundState = { hikeId: string; startedAt: number; coordinates: readonly LngLat[]; latestPosition: Position | null; deviation: DeviationProcessing };
 const KEY = 'hike.backgroundState';
 
