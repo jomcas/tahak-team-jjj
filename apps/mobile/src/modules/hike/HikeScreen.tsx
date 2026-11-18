@@ -28,7 +28,7 @@ import {
 import { useDeviationAlerts } from './deviation/useDeviationAlerts';
 import { processDeviationSample, startDeviationProcessing, type DeviationProcessing } from './deviation/processing';
 import { clearPendingSimulation, endHike, hikeStore, startHike, type RunningHike } from './hikeStore';
-import { hikeLocationLifecycle } from './location/backgroundTask';
+import { backgroundState, hikeLocationLifecycle } from './location/backgroundTask';
 import { useHikerPosition, type HikerPosition } from './location/useHikerPosition';
 import { HikeMap, type HikeMapHandle } from './map/HikeMap';
 import { MapControls } from './map/MapControls';
@@ -253,7 +253,12 @@ function DestinationMap({
           } },
           { text: s.allowLocation, onPress: () => {
             if (hikeStore.getSnapshot().hike?.id !== id) return;
-            void hikeLocationLifecycle.start({ title: s.backgroundNotificationTitle, body: s.backgroundNotificationBody })
+            const active = hikeStore.getSnapshot().hike;
+            if (!active || active.id !== id) return;
+            void backgroundState.open(String(active.startedAt), active.startedAt, chosen.line.coordinates)
+              .then(() => hikeStore.getSnapshot().hike?.id === id
+                ? hikeLocationLifecycle.start({ title: s.backgroundNotificationTitle, body: s.backgroundNotificationBody })
+                : 'permission-denied' as const)
               .then((result) => {
                 if (result === 'permission-denied' && hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
               }).catch(() => {
