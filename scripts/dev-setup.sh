@@ -51,7 +51,7 @@ else
     if [[ ! -f "$map_file" ]]; then
       pmtiles_bin="${PMTILES:-$(command -v pmtiles || echo "$HOME/.local/bin/pmtiles")}"
       if [[ -x "$pmtiles_bin" ]]; then
-        echo "==> Cutting $map_file…"
+        echo "==> Cutting ${map_file}…"
         PMTILES="$pmtiles_bin" "content/$id/make-pmtiles.sh"
       else
         echo "==> No $map_file and no pmtiles CLI; skipping the $id map." >&2
