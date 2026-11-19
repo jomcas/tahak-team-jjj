@@ -92,6 +92,25 @@ for (const mode of MODES) {
     }
   });
 
+  test(`${mode} style: labels use Latin glyphs only (English, or a Latin local name)`, () => {
+    const latin = ['case', ['has', 'script'], ['coalesce', ['get', 'name:en'], ''], ['coalesce', ['get', 'name:en'], ['get', 'name']]];
+    const textField = (layer: (typeof style.layers)[number]) =>
+      ((layer as { layout?: Record<string, unknown> }).layout ?? {})['text-field'];
+    const named = style.layers.filter((layer) => JSON.stringify(textField(layer) ?? null).includes('"name'));
+    assert.ok(named.length > 5, 'expected the basemap name labels');
+    for (const layer of named) {
+      const field = textField(layer);
+      // The local-script second line (pgf:name, a per-script font) needed glyphs the APK lacks.
+      assert.doesNotMatch(JSON.stringify(field), /pgf:name|Devanagari/, `${layer.id} still draws a local-script line`);
+      if (layer.id === 'places_country') continue; // One English-only part already.
+      assert.doesNotMatch(JSON.stringify(field), /"format"/, `${layer.id} still builds a two-part label`);
+      const label = Array.isArray(field) && field[0] === 'step' ? field[field.length - 1] : field;
+      assert.deepEqual(label, latin, `${layer.id} label`);
+    }
+    const region = style.layers.find((layer) => layer.id === 'places_region');
+    assert.deepEqual((textField(region!) as unknown[]).slice(0, 4), ['step', ['zoom'], ['coalesce', ['get', 'ref:en'], ['get', 'ref']], 6]);
+  });
+
   test(`${mode} style: every Waypoint type has a pin in the tahak sprite`, () => {
     const sprite = (style.sprite as { id: string; url: string }[]).find((s) => s.id === 'tahak');
     assert.equal(sprite?.url, `asset://map/sprites/tahak-${mode}`);
