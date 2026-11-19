@@ -4,8 +4,10 @@ import { fill, formatDistance } from '../format';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState } from 'react-native';
 import { createBackgroundStateProcessor, type BackgroundState } from './backgroundState';
 import { createHikeLocationLifecycle, HIKE_LOCATION_TASK, type HikeLocationTaskData } from './backgroundLifecycle';
+import { startTierTracking, stepUpdateTier, UPDATE_TIERS } from './updateTier';
 
 export const backgroundState = createBackgroundStateProcessor(AsyncStorage);
 
@@ -18,6 +20,8 @@ function enqueue(effect: () => Promise<void>): Promise<void> {
   return next;
 }
 const listeners = new Set<() => void>();
+// The update rate follows the hiker's movement (updateTier.ts), per Hike, in this JS context.
+let tiers = { hikeId: '', tracking: startTierTracking() };
 export const backgroundSnapshot = {
   subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
   getSnapshot() { return snapshot; },
@@ -54,10 +58,24 @@ TaskManager.defineTask<HikeLocationTaskData>(HIKE_LOCATION_TASK, ({ data, error 
         }
       }
       if (endedHikes.has(state.hikeId)) return;
+      // The simulated bench walk keeps the fixed rate: its positions come from a timeline.
+      if (!state.bench) {
+        if (tiers.hikeId !== state.hikeId) tiers = { hikeId: state.hikeId, tracking: startTierTracking() };
+        const before = tiers.tracking.tier;
+        for (const { coords, timestamp } of data.locations) {
+          tiers.tracking = stepUpdateTier(tiers.tracking, { latitude: coords.latitude, longitude: coords.longitude, timestamp });
+        }
+        const tier = tiers.tracking.tier;
+        if (tier !== before) {
+          console.log(`[hike] location updates: ${tier}, every ${UPDATE_TIERS[tier].timeInterval / 1000} s`);
+          void hikeLocationLifecycle.retune(UPDATE_TIERS[tier], { foreground: AppState.currentState === 'active' })
+            .catch((failure: unknown) => console.warn('[hike] could not change the location update rate', failure));
+        }
+      }
       snapshot = result.state;
       listeners.forEach((listener) => listener());
     }
   }
 }));
 
-export const hikeLocationLifecycle = createHikeLocationLifecycle(Location, { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 0 });
+export const hikeLocationLifecycle = createHikeLocationLifecycle(Location, { accuracy: Location.Accuracy.High, ...UPDATE_TIERS.moving });

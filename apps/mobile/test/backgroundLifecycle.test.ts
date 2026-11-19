@@ -53,3 +53,29 @@ test('stop waits for a pending start', async () => {
   await Promise.all([start, stop]);
   assert.equal(started, false);
 });
+
+test('retune changes the running service intervals and keeps its notification', async () => {
+  let started = false;
+  const calls: unknown[] = [];
+  const service = createHikeLocationLifecycle({
+    requestForegroundPermissionsAsync: async () => ({ granted: true }),
+    requestBackgroundPermissionsAsync: async () => ({ granted: true }),
+    hasStartedLocationUpdatesAsync: async () => started,
+    startLocationUpdatesAsync: async (_name, options) => { calls.push(options); started = true; },
+    stopLocationUpdatesAsync: async () => { started = false; },
+  }, requestOptions);
+  const still = { timeInterval: 15000, distanceInterval: 5 };
+  assert.equal(await service.retune(still, { foreground: true }), false, 'nothing running yet');
+  await service.start({ title: 'Trail', body: 'Tracking' });
+  assert.equal(await service.retune(still, { foreground: true }), true);
+  assert.deepEqual(calls[1], {
+    accuracy: 4, timeInterval: 15000, distanceInterval: 5,
+    foregroundService: { notificationTitle: 'Trail', notificationBody: 'Tracking', killServiceOnDestroy: true },
+  });
+  // expo-location refuses foregroundService from the background; the running service stays.
+  assert.equal(await service.retune(still, { foreground: false }), true);
+  assert.deepEqual(calls[2], { accuracy: 4, timeInterval: 15000, distanceInterval: 5 });
+  await service.stop();
+  assert.equal(await service.retune({ timeInterval: 5000, distanceInterval: 0 }, { foreground: true }), false, 'not after the Hike ends');
+  assert.equal(calls.length, 3);
+});
