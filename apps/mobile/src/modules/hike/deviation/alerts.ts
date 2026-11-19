@@ -105,7 +105,7 @@ export async function prepareDeviationAlerts(text: DeviationAlertText): Promise<
 }
 
 /** A Deviation started: vibrate, sound the tone, and post the notification. */
-export function startDeviationAlert(text: { title: string; body: string }): void {
+export function startDeviationAlert(text: { title: string; body: string }): Promise<unknown> {
   Vibration.vibrate(DEVIATION_VIBRATION);
   const sound = tone();
   if (sound) {
@@ -126,11 +126,13 @@ export function startDeviationAlert(text: { title: string; body: string }): void
       }),
     )
     .catch(() => undefined);
+  return posting;
 }
 
 /** The Deviation is over (back on the Trail, or the Hike ended): stop and remove the alerts. */
-export function clearDeviationAlert(): void {
+export function clearDeviationAlert(): Promise<unknown> {
   Vibration.cancel();
   player?.pause();
   posting = posting.then(() => Notifications.dismissNotificationAsync(NOTIFICATION_ID)).catch(() => undefined);
+  return posting;
 }

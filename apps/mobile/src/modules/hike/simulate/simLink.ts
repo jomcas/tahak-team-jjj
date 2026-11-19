@@ -3,6 +3,8 @@
 //   tahak://hike/simulate?trail=<id>&speed=<n>&at=<0..1>
 //       Starts a simulated walk Hike (ending any running Hike first). trail defaults to the
 //       first Trail, speed to 15 (1 to 120), at (where in the script to start) to 0.
+//       On Android development builds, background=1 opts into the service bench; delay is
+//       seconds before the excursion (default 360, clamped to 1..3600).
 //   tahak://hike/simulate/off-trail
 //       Sends the running simulated walk 60 m off the Trail for 45 s now (#8's Deviation).
 //   tahak://hike/end
@@ -13,7 +15,7 @@ export const DEFAULT_SPEED = SPEEDS[0];
 const MAX_SPEED = 120;
 
 export type HikeLink =
-  | { action: 'simulate'; trailId: string | null; speed: number; startFraction: number }
+  | { action: 'simulate'; trailId: string | null; speed: number; startFraction: number; backgroundDelay?: number }
   | { action: 'off-trail' }
   | { action: 'end' };
 
@@ -35,6 +37,7 @@ export function parseHikeLink(url: string | null): HikeLink | null {
         trailId: param('trail') || null,
         speed: Number.isFinite(speed) && speed >= 1 ? Math.min(MAX_SPEED, speed) : DEFAULT_SPEED,
         startFraction: Number.isFinite(at) ? Math.max(0, Math.min(1, at)) : 0,
+        ...(param('background') === '1' ? { backgroundDelay: Math.max(1, Math.min(3600, Number(param('delay')) || 360)) } : {}),
       };
     }
     case 'simulate/off-trail':

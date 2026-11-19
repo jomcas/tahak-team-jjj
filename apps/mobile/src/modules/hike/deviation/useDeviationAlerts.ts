@@ -13,6 +13,7 @@ import { clearDeviationAlert, prepareDeviationAlerts, startDeviationAlert } from
 export function useDeviationAlerts(
   hikeId: number | null,
   deviation: { startedMs: number; startedOffM: number } | null,
+  taskOwned = false,
 ) {
   const s = useStrings(strings);
   // The latest text, read when an alert fires, so a language switch does not fire it again.
@@ -37,14 +38,14 @@ export function useDeviationAlerts(
   const startedMs = deviation?.startedMs ?? null;
   const startedOffM = deviation?.startedOffM ?? 0;
   useEffect(() => {
-    if (hikeId === null || startedMs === null) return;
+    if (taskOwned || hikeId === null || startedMs === null) return;
     const t = text.current;
     startDeviationAlert({
       title: t.deviationNotificationTitle,
       body: fill(t.deviationNotificationBody, { distance: formatDistance(startedOffM) }),
     });
-    return clearDeviationAlert;
+    return () => { void clearDeviationAlert(); };
     // startedOffM belongs to the Deviation that startedMs names.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hikeId, startedMs]);
+  }, [hikeId, startedMs, taskOwned]);
 }

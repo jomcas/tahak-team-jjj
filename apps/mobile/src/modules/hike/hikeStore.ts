@@ -1,8 +1,10 @@
+import { clearDeviationAlert } from './deviation/alerts';
 // The running Hike, if any, kept outside React so it survives tab switches and a deep link
 // can start one before the Hike tab has ever been opened. Also owns the position source:
 // while a simulated walk runs, useHikerPosition reads it instead of the GPS.
 
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
+import { endBackgroundHike, hikeLocationLifecycle } from './location/backgroundTask';
 
 import { createSimulatedWalk, type SimulatedWalk } from './simulate/player';
 import { parseHikeLink, type HikeLink } from './simulate/simLink';
@@ -15,6 +17,7 @@ export type RunningHike = {
   trailId: string;
   /** The positions come from a simulated walk, not the GPS. */
   simulation: SimulatedWalk | null;
+  backgroundBench: boolean;
   startedAt: number;
 };
 
@@ -51,6 +54,7 @@ export function startHike({
   simulated,
   speed,
   startFraction,
+  backgroundDelay,
 }: {
   destinationId: string;
   trailId: string;
@@ -58,18 +62,31 @@ export function startHike({
   simulated: boolean;
   speed?: number;
   startFraction?: number;
+  backgroundDelay?: number;
 }) {
+  if (state.hike && (!state.hike.simulation || state.hike.backgroundBench) && Platform.OS === 'android') {
+    void hikeLocationLifecycle.stop().catch(() => undefined);
+    const backgroundHikeId = String(state.hike.startedAt);
+    void endBackgroundHike(backgroundHikeId).catch(() => undefined);
+  }
   state.hike?.simulation?.stop();
   const simulation = simulated ? createSimulatedWalk({ trail, trailId, speed, startFraction }) : null;
   simulation?.start();
   setState({
-    hike: { id: nextId++, destinationId, trailId, simulation, startedAt: Date.now() },
+    hike: { id: nextId++, destinationId, trailId, simulation, backgroundBench: backgroundDelay !== undefined, startedAt: Date.now() },
     pendingSimulation: null,
   });
 }
 
 /** Ends the running Hike: stops the simulated walk, if any, and tracking. */
 export function endHike() {
+  if (state.hike && (!state.hike.simulation || state.hike.backgroundBench) && Platform.OS === 'android') {
+    void hikeLocationLifecycle.stop().catch(() => undefined);
+    const backgroundHikeId = String(state.hike.startedAt);
+    void endBackgroundHike(backgroundHikeId).catch(() => undefined);
+  } else {
+    void clearDeviationAlert();
+  }
   state.hike?.simulation?.stop();
   setState({ hike: null });
 }
