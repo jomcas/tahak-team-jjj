@@ -272,3 +272,13 @@ for (const [name, trail] of [['Batulao Old Trail', seedTrail()], ['a straight Tr
     });
   });
 }
+
+test('processing ignores repeated samples from overlapping sources', async () => {
+  const { startDeviationProcessing, processDeviationSample } = await import('../src/modules/hike/deviation/processing.ts');
+  const trail = prepareTrail([[120, 14], [120.01, 14]]);
+  assert.ok(trail);
+  const first = processDeviationSample(startDeviationProcessing(), trail, { latitude: 14, longitude: 120, timestamp: T0 });
+  const duplicate = processDeviationSample(first.state, trail, { latitude: 15, longitude: 120, timestamp: T0 });
+  assert.equal(duplicate.state, first.state);
+  assert.equal(duplicate.event, null);
+});
