@@ -383,6 +383,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    // With wrap on, alignContent (default flex-start) places the line, so center it too.
+    alignContent: 'center',
     flexWrap: 'wrap',
     gap: 6,
     minHeight: 48,
