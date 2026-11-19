@@ -22,6 +22,8 @@ const SAME_IN_BOTH = new Set([
   '{region} · {elevation} m',
   '{distance} · {eta}',
   '{max}° / {min}°',
+  // The simulated walk's speed button, a number and a times sign.
+  '{speed}×',
   'Jump-off',
   'Campsite',
   // Glossary terms used as is (CONTEXT.md).

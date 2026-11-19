@@ -1,6 +1,8 @@
 // This module's own UI text. Pure data with no imports (see src/i18n/types.ts).
 
 const en = {
+  demoExpand: 'Show demo controls',
+  demoCollapse: 'Hide demo controls',
   loading: 'Opening the map…',
   emptyTitle: 'No map on your phone yet',
   emptyBody: 'Download a Destination in Explore. Its map then works here on the trail, even without signal.',
@@ -70,6 +72,7 @@ const en = {
   simulationNote: 'Not your real position.',
   // The button shows the speed it switches to, not the current one (the title says that).
   simulationSpeed: 'Switch to {speed}×',
+  simulationSpeedShort: '{speed}×',
   simulationSpeedHint: 'Change how fast the simulated walk goes',
   simulationPause: 'Pause',
   simulationResume: 'Resume',
@@ -115,6 +118,8 @@ const en = {
 };
 
 const fil: Record<keyof typeof en, string> = {
+  demoExpand: 'Ipakita ang demo controls',
+  demoCollapse: 'Itago ang demo controls',
   loading: 'Binubuksan ang mapa…',
   emptyTitle: 'Wala pang mapa sa phone mo',
   emptyBody: 'Mag-download ng Destination sa Tuklasin. Gagana rito ang mapa nito sa trail, kahit walang signal.',
@@ -178,6 +183,7 @@ const fil: Record<keyof typeof en, string> = {
   simulationRunning: 'Kunwaring lakad · {speed}×',
   simulationNote: 'Hindi ito ang totoong kinaroroonan mo.',
   simulationSpeed: 'Gawing {speed}×',
+  simulationSpeedShort: '{speed}×',
   simulationSpeedHint: 'Palitan ang bilis ng kunwaring lakad',
   simulationPause: 'Ihinto',
   simulationResume: 'Ituloy',
