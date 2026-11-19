@@ -12,7 +12,7 @@ type LocationService = {
   stopLocationUpdatesAsync(name: string): Promise<void>;
 };
 
-export function createHikeLocationLifecycle(location: LocationService) {
+export function createHikeLocationLifecycle(location: LocationService, options: Pick<LocationTaskOptions, 'accuracy' | 'timeInterval' | 'distanceInterval'>) {
   // Serialize native operations so an end during a permission prompt cannot leave
   // a service running after the Hike has ended.
   let pending: Promise<unknown> = Promise.resolve();
@@ -28,6 +28,7 @@ export function createHikeLocationLifecycle(location: LocationService) {
           !(await location.requestBackgroundPermissionsAsync()).granted) return 'permission-denied';
       if (!(await location.hasStartedLocationUpdatesAsync(HIKE_LOCATION_TASK))) {
         await location.startLocationUpdatesAsync(HIKE_LOCATION_TASK, {
+          ...options,
           foregroundService: { notificationTitle: notification.title, notificationBody: notification.body, killServiceOnDestroy: true },
         });
       }

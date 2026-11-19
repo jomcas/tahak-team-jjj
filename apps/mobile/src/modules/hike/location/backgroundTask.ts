@@ -60,4 +60,4 @@ TaskManager.defineTask<HikeLocationTaskData>(HIKE_LOCATION_TASK, ({ data, error 
   }
 }));
 
-export const hikeLocationLifecycle = createHikeLocationLifecycle(Location);
+export const hikeLocationLifecycle = createHikeLocationLifecycle(Location, { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 0 });
