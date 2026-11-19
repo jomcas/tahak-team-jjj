@@ -112,6 +112,31 @@ function withBundledFonts<T>(value: T): T {
   return value;
 }
 
+// With lang 'en', Protomaps labels a place whose name isn't in Latin script (the tiles tag it
+// with `script`) on two lines: the English name, then the local name in its own script. The
+// APK bundles Latin glyphs only (0-255, 256-511, 8192-8447), so that second line asked for
+// ranges such as Cyrillic 1024-1279 that aren't there ("Failed to load glyph range"). These
+// labels show the English name, and the local name only when it is Latin already, as every
+// Filipino place name is.
+const LATIN_LABEL = [
+  'case',
+  ['has', 'script'],
+  ['coalesce', ['get', 'name:en'], ''],
+  ['coalesce', ['get', 'name:en'], ['get', 'name']],
+] as const;
+
+/** Swaps Protomaps' two-script name labels for LATIN_LABEL, keeping any zoom step before it. */
+function withLatinLabels(basemap: LayerSpecification[]): LayerSpecification[] {
+  return basemap.map((layer) => {
+    if (layer.type !== 'symbol') return layer;
+    const field = layer.layout?.['text-field'] as unknown;
+    if (!JSON.stringify(field ?? null).includes('"script"')) return layer;
+    const stepped = Array.isArray(field) && field[0] === 'step' && field.length === 5;
+    const label = stepped ? [...field.slice(0, 4), LATIN_LABEL] : LATIN_LABEL;
+    return { ...layer, layout: { ...layer.layout, 'text-field': label as never } };
+  });
+}
+
 /**
  * The basemap style for a theme. `mapFileUri` is the pack's file:// URI; MapLibre Native
  * reads PMTiles from it directly through the pmtiles:// scheme.
@@ -139,7 +164,7 @@ export function buildMapStyle({
         attribution: ATTRIBUTION,
       },
     },
-    layers: withBundledFonts(basemap),
+    layers: withBundledFonts(withLatinLabels(basemap)),
   };
 }
 
