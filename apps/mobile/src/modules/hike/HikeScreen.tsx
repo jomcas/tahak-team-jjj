@@ -10,6 +10,13 @@ import { textStyles } from '../../theme/typography';
 import {
   addSimulatedMember,
   GroupAlertBanners,
+  GroupHikeCard,
+  groupHikeAvailable,
+  groupSession,
+  JoinScanner,
+  requestNearbyPermissions,
+  useGroupPositionSharing,
+  useMemberName,
   initials,
   memberDot,
   memberLabel,
@@ -50,7 +57,7 @@ import { EndSuggestion } from './ui/EndSuggestion';
 import { HikePanel } from './ui/HikePanel';
 import { SimulationBar } from './ui/SimulationBar';
 import { publishLiveHike } from './tools/liveHike';
-import { TrailPickerCard } from './ui/TrailPickerCard';
+import { TrailPickerCard, type HikeMode } from './ui/TrailPickerCard';
 import type { DestinationChoice } from './latestPack';
 import { useLatestPack } from './useLatestPack';
 
@@ -183,6 +190,8 @@ function DestinationMap({
   useDeviationAlerts(hike?.id ?? null, deviation, taskOwned);
   // Group Hike Alerts (#24): this phone's own Alerts out, other members' Alerts in.
   useSelfAlerts(hike?.id ?? null, deviation, position, taskOwned);
+  // Group Hike (#23): this phone's dot on the other members' maps.
+  useGroupPositionSharing(hike ? position : null);
   const sa = useStrings(alertStrings);
   const memberRecords = useMembers();
   const members = useMemo<MapMember[]>(
@@ -216,6 +225,9 @@ function DestinationMap({
   const [notice, setNotice] = useState<string | null>(null);
   const [pickedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [simulate, setSimulate] = useState(false);
+  const [mode, setMode] = useState<HikeMode>('solo');
+  const [memberName, setMemberName] = useMemberName();
+  const [scanning, setScanning] = useState(false);
   // The Hike whose map the hiker moved by hand; following resumes on re-center. Every Hike
   // starts in follow mode.
   const [unfollowedHikeId, setUnfollowedHikeId] = useState<number | null>(null);
@@ -293,6 +305,38 @@ function DestinationMap({
       clearPendingSimulation();
     }
   }, [pendingSimulation, entries, pickable, start]);
+
+  // Group Hike (#23). The nearby-devices permission is asked before the Hike starts, so its
+  // dialog never stacks with the background-location one (#62).
+  const groupReady = useCallback(async () => {
+    if (!groupHikeAvailable()) {
+      Alert.alert(sa.groupTitle, sa.groupErrorUnavailable);
+      return false;
+    }
+    if (!(await requestNearbyPermissions().catch(() => false))) {
+      Alert.alert(sa.groupTitle, sa.groupErrorPermission);
+      return false;
+    }
+    return true;
+  }, [sa.groupErrorPermission, sa.groupErrorUnavailable, sa.groupTitle]);
+
+  const startGroup = useCallback(async () => {
+    if (!(await groupReady())) return;
+    start(selectedTrailId, { simulated: simulate });
+    const id = hikeStore.getSnapshot().hike?.id;
+    if (id != null) void groupSession.lead(id, memberName);
+  }, [groupReady, start, selectedTrailId, simulate, memberName]);
+
+  const joinScanned = useCallback(
+    async (qr: string) => {
+      setScanning(false);
+      if (!(await groupReady())) return;
+      start(selectedTrailId, { simulated: simulate });
+      const id = hikeStore.getSnapshot().hike?.id;
+      if (id != null) void groupSession.join(id, memberName, qr);
+    },
+    [groupReady, start, selectedTrailId, simulate, memberName],
+  );
 
   const recenter = useCallback(async () => {
     setUnfollowedHikeId(null);
@@ -389,6 +433,7 @@ function DestinationMap({
           <>
             {view?.suggestEnd ? <EndSuggestion onEnd={endHike} onDismiss={dismiss} /> : null}
             {hike.simulation ? null : <SimulatedMemberControls card onAdd={addMember} />}
+            <GroupHikeCard hikeId={hike.id} />
             <HikePanel destinationId={pack.destination.id} trailName={entry.trail.name} view={view} onEnd={confirmEnd} />
           </>
         ) : (
@@ -405,9 +450,16 @@ function DestinationMap({
             simulate={simulate}
             onSimulateChange={setSimulate}
             onStart={() => start(selectedTrailId, { simulated: simulate })}
+            mode={mode}
+            onModeChange={setMode}
+            memberName={memberName}
+            onMemberNameChange={setMemberName}
+            onStartGroup={() => void startGroup()}
+            onJoinGroup={() => setScanning(true)}
           />
         )}
       </MapControls>
+      <JoinScanner visible={scanning} onClose={() => setScanning(false)} onScanned={(qr) => void joinScanned(qr)} />
     </View>
   );
 }

@@ -14,7 +14,7 @@ import {
   type PreparedTrail,
   type SimulatedWalk,
 } from '../hike';
-import { removeMember, simulatedPeerTransport } from './alertsStore';
+import { removeMember, SIMULATED_MEMBER_ID, simulatedPeerTransport } from './alertsStore';
 import {
   incidentRunning,
   startIncident,
@@ -25,7 +25,7 @@ import {
 import type { AlertType } from './types';
 
 export const SIMULATED_MEMBER = {
-  id: 'simulated-ana',
+  id: SIMULATED_MEMBER_ID,
   /** The name as the member would give it; the UI adds "(simulated)" in the hiker's language. */
   name: 'Ana',
   /** Starts this share of the walk ahead of the hiker (behind, near the end of the walk). */

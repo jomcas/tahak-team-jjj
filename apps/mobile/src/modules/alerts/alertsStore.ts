@@ -4,11 +4,16 @@
 import { useSyncExternalStore } from 'react';
 
 import { applyAlert, applyPosition, type Member } from './memberState.ts';
-import { createLoopbackPair, type AlertTransport, type LoopbackTransport } from './transport.ts';
+import { createLoopbackPair, GroupTransport, type AlertTransport, type LoopbackTransport } from './transport.ts';
 import type { Alert, AlertPosition, AlertType } from './types.ts';
 
-/** This phone's member id. #23 replaces it with the id the Group Hike gives this phone. */
+/**
+ * This phone's member id on its own side. Over Nearby, the NearbyTransport sends this phone as
+ * the member id its Group Hike gave it (#23).
+ */
 export const SELF_ID = 'this-phone';
+/** The simulated member's id (simulatedMember.ts). Only ever on this phone's loopback. */
+export const SIMULATED_MEMBER_ID = 'simulated-ana';
 const SELF_NAME = 'This phone';
 const MAX_ALERTS = 50;
 
@@ -73,6 +78,19 @@ export function setTransport(next: AlertTransport): void {
   listen(next);
 }
 
+/**
+ * A Group Hike started (#23): the link to the other phones goes beside the loopback, so the
+ * simulated member keeps working. See GroupTransport.
+ */
+export function attachGroupTransport(remote: AlertTransport): void {
+  setTransport(new GroupTransport(phoneEnd, remote, new Set([SELF_ID, SIMULATED_MEMBER_ID])));
+}
+
+/** The Group Hike is over: back to the loopback alone. */
+export function detachGroupTransport(): void {
+  setTransport(phoneEnd);
+}
+
 /** The other end of the loopback: the simulated member sends through it, as a second phone would. */
 export function simulatedPeerTransport(): LoopbackTransport {
   return otherEnd;
@@ -94,6 +112,11 @@ export function sendAlert(type: AlertType, position: AlertPosition, extra: { off
   console.log(`[alerts] sent ${type} from this phone at ${position.latitude.toFixed(5)},${position.longitude.toFixed(5)}`);
   transport.send(alert);
   return alert;
+}
+
+/** Sends this phone's position to the other members of the Group Hike, so its dot moves. */
+export function sendPosition(position: AlertPosition, time: number = Date.now()): void {
+  transport.sendPosition({ memberId: SELF_ID, memberName: SELF_NAME, position, time });
 }
 
 /** Forgets a member (they left the Group Hike, or the simulated member was removed). */

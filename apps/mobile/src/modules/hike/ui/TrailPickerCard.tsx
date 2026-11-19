@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useState, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useStrings, useTheme } from '../../../settings/preferences';
@@ -121,57 +121,82 @@ function DestinationChooser({
   );
 }
 
+export type HikeMode = 'solo' | 'group';
+
 /**
- * Solo | Group (issue #24). Solo Hike is the default and the only one that starts; Group is
- * marked "Coming soon" and only opens a sheet saying so. Olive only, never red.
+ * Solo | Group (issues #24 and #23). Solo Hike is the default. Group shows the hiker's name in
+ * the group, and the card's Start becomes "Start Group Hike" (leader, shows a QR code) and
+ * "Scan to join". Olive only, never red.
  */
-function HikeModeChoice() {
+function HikeModeChoice({ mode, onChange }: { mode: HikeMode; onChange: (mode: HikeMode) => void }) {
   const s = useStrings(strings);
   const { colors } = useTheme();
-  const [groupInfo, setGroupInfo] = useState(false);
+  const option = (value: HikeMode, label: string, icon: 'account' | 'account-group') => {
+    const selected = mode === value;
+    return (
+      <Pressable
+        accessibilityRole="radio"
+        accessibilityState={{ checked: selected }}
+        onPress={() => onChange(value)}
+        style={({ pressed }) => [
+          styles.segment,
+          { backgroundColor: selected ? colors.primary : 'transparent', opacity: pressed ? 0.85 : 1 },
+        ]}
+      >
+        <MaterialCommunityIcons name={icon} size={18} color={selected ? colors.onPrimary : colors.muted} />
+        <Text style={[textStyles.bodyStrong, { color: selected ? colors.onPrimary : colors.muted }]}>{label}</Text>
+      </Pressable>
+    );
+  };
 
   return (
-    <>
-      <View
-        accessibilityRole="radiogroup"
-        accessibilityLabel={s.hikeModeLabel}
-        style={[styles.segmented, { borderColor: colors.line }]}
-      >
-        <Pressable
-          accessibilityRole="radio"
-          accessibilityState={{ checked: true }}
-          style={[styles.segment, { backgroundColor: colors.primary }]}
-        >
-          <MaterialCommunityIcons name="account" size={18} color={colors.onPrimary} />
-          <Text style={[textStyles.bodyStrong, { color: colors.onPrimary }]}>{s.soloHike}</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="radio"
-          accessibilityState={{ checked: false }}
-          accessibilityHint={s.comingSoon}
-          onPress={() => setGroupInfo(true)}
-          style={({ pressed }) => [styles.segment, { opacity: pressed ? 0.85 : 1 }]}
-        >
-          <MaterialCommunityIcons name="account-group" size={18} color={colors.muted} />
-          <Text style={[textStyles.bodyStrong, { color: colors.muted }]}>{s.groupHike}</Text>
-          <View style={[styles.badge, { backgroundColor: colors.tint }]}>
-            <Text style={[textStyles.label, { color: colors.onTint }]}>{s.comingSoon}</Text>
-          </View>
-        </Pressable>
-      </View>
-      <Sheet visible={groupInfo} onClose={() => setGroupInfo(false)} title={s.groupSheetTitle}>
-        <View style={styles.simRow}>
-          <MaterialCommunityIcons name="qrcode" size={28} color={colors.primary} />
-          <Text style={[textStyles.body, styles.grow, { color: colors.ink }]}>{s.groupSheetBody}</Text>
-        </View>
-      </Sheet>
-    </>
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={s.hikeModeLabel}
+      style={[styles.segmented, { borderColor: colors.line }]}
+    >
+      {option('solo', s.soloHike, 'account')}
+      {option('group', s.groupHike, 'account-group')}
+    </View>
   );
 }
+
+/** Group mode: the name the others see on this phone's dot. */
+function GroupNameField({ name, onChange }: { name: string; onChange: (name: string) => void }) {
+  const s = useStrings(strings);
+  const { colors } = useTheme();
+  return (
+    <View style={styles.nameField}>
+      <View style={styles.simRow}>
+        <MaterialCommunityIcons name="qrcode" size={22} color={colors.primary} />
+        <Text style={[textStyles.label, styles.grow, { color: colors.muted }]}>{s.groupModeHint}</Text>
+      </View>
+      <Text style={[textStyles.labelStrong, { color: colors.ink }]}>{s.memberNameLabel}</Text>
+      <TextInput
+        accessibilityLabel={s.memberNameLabel}
+        accessibilityHint={name.trim() ? undefined : s.memberNameNeeded}
+        value={name}
+        onChangeText={onChange}
+        placeholder={s.memberNamePlaceholder}
+        placeholderTextColor={colors.muted}
+        maxLength={MEMBER_NAME_MAX}
+        autoCapitalize="words"
+        autoCorrect={false}
+        returnKeyType="done"
+        style={[textStyles.body, styles.input, { color: colors.ink, borderColor: colors.line, backgroundColor: colors.page }]}
+      />
+      {name.trim() ? null : <Text style={[textStyles.label, { color: colors.muted }]}>{s.memberNameNeeded}</Text>}
+    </View>
+  );
+}
+
+/** The longest name a Group Hike carries (alerts/groupMessage.ts MAX_NAME_LENGTH). */
+const MEMBER_NAME_MAX = 40;
 
 /**
  * Before a Hike: the Destination choice, Solo | Group, the downloaded Destination's Trails (name and distance) to choose from, the
  * simulated-walk switch for demos, and a large olive Start Hike button. A Hike needs a Trail.
+ * In Group mode the start is "Start Group Hike" or "Scan to join", and needs a name.
  */
 export function TrailPickerCard({
   destinationId,
@@ -184,6 +209,12 @@ export function TrailPickerCard({
   simulate,
   onSimulateChange,
   onStart,
+  mode,
+  onModeChange,
+  memberName,
+  onMemberNameChange,
+  onStartGroup,
+  onJoinGroup,
 }: {
   destinationId: string;
   destinations: readonly DestinationChoice[];
@@ -195,6 +226,12 @@ export function TrailPickerCard({
   simulate: boolean;
   onSimulateChange: (simulate: boolean) => void;
   onStart: () => void;
+  mode: HikeMode;
+  onModeChange: (mode: HikeMode) => void;
+  memberName: string;
+  onMemberNameChange: (name: string) => void;
+  onStartGroup: () => void;
+  onJoinGroup: () => void;
 }) {
   const s = useStrings(strings);
   const { colors } = useTheme();
@@ -207,7 +244,8 @@ export function TrailPickerCard({
         onChoose={onChooseDestination}
         locked={destinationLocked}
       />
-      <HikeModeChoice />
+      <HikeModeChoice mode={mode} onChange={onModeChange} />
+      {mode === 'group' ? <GroupNameField name={memberName} onChange={onMemberNameChange} /> : null}
       <Text accessibilityRole="header" style={[textStyles.heading, { color: colors.ink }]}>
         {s.pickTrail}
       </Text>
@@ -265,13 +303,34 @@ export function TrailPickerCard({
         />
       </View>
 
-      <PanelButton
-        label={s.startHike}
-        icon="hiking"
-        large
-        onPress={onStart}
-        disabled={selectedId === null || trails.length === 0}
-      />
+      {mode === 'group' ? (
+        <View style={styles.groupButtons}>
+          <PanelButton
+            label={s.startGroupHike}
+            icon="qrcode"
+            large
+            onPress={onStartGroup}
+            accessibilityHint={s.startGroupHikeHint}
+            disabled={selectedId === null || trails.length === 0 || !memberName.trim()}
+          />
+          <PanelButton
+            label={s.joinGroupHike}
+            icon="qrcode-scan"
+            kind="tint"
+            onPress={onJoinGroup}
+            accessibilityHint={s.joinGroupHikeHint}
+            disabled={selectedId === null || trails.length === 0 || !memberName.trim()}
+          />
+        </View>
+      ) : (
+        <PanelButton
+          label={s.startHike}
+          icon="hiking"
+          large
+          onPress={onStart}
+          disabled={selectedId === null || trails.length === 0}
+        />
+      )}
     </Panel>
   );
 }
@@ -330,10 +389,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 4,
   },
-  badge: {
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+  nameField: {
+    gap: 6,
+  },
+  input: {
+    minHeight: 48,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  groupButtons: {
+    gap: 8,
   },
   sheet: {
     borderTopLeftRadius: 20,
