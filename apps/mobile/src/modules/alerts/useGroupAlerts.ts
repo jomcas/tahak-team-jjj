@@ -62,9 +62,9 @@ export function useGroupAlertNotifications() {
 }
 
 /**
- * Publishes this phone's own Deviation and Flare as outgoing Alerts while a Hike runs. Today
- * nobody receives them (the loopback's other end is the simulated member); they prove the
- * send path #23 will use, and are logged.
+ * Publishes this phone's own Deviation and Flare as outgoing Alerts while a Hike runs. During a
+ * Group Hike (#23) they reach the other phones over Nearby; otherwise only the loopback (the
+ * simulated member) hears them, and they are logged.
  */
 export function useSelfAlerts(
   hikeId: number | null,

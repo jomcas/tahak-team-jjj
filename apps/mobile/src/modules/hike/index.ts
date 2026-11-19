@@ -44,6 +44,8 @@ export {
   type DeviationFix,
   type DeviationState,
 } from './deviation/detector';
+// The running Hike, so a Group Hike (#23, alerts module) dissolves when its Hike ends.
+export { hikeStore, type RunningHike } from './hikeStore';
 // The simulated walk player, for the simulated group member (#24, alerts module).
 export { createSimulatedWalk, type SimulatedWalk, type SimulationSnapshot } from './simulate/player';
 export {

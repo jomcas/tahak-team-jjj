@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.tahak'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.tahaknearby"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+dependencies {
+  // Google Nearby Connections (offline P2P over Bluetooth and Wi-Fi, ADR 0002).
+  // https://developers.google.com/nearby/connections/android/get-started
+  // Pinned to 19.3.0: 19.4.0 and 19.5.x ship Kotlin 2.4 metadata, which the Kotlin compiler of
+  // this Expo SDK (57) cannot read ("incompatible version of Kotlin", checked 2026-11-18).
+  implementation 'com.google.android.gms:play-services-nearby:19.3.0'
+}

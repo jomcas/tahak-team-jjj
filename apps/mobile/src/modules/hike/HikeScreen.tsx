@@ -10,6 +10,13 @@ import { textStyles } from '../../theme/typography';
 import {
   addSimulatedMember,
   GroupAlertBanners,
+  GroupHikeCard,
+  groupHikeAvailable,
+  groupSession,
+  JoinScanner,
+  requestNearbyPermissions,
+  useGroupPositionSharing,
+  useMemberName,
   initials,
   memberDot,
   memberLabel,
@@ -50,7 +57,7 @@ import { EndSuggestion } from './ui/EndSuggestion';
 import { HikePanel } from './ui/HikePanel';
 import { SimulationBar } from './ui/SimulationBar';
 import { publishLiveHike } from './tools/liveHike';
-import { TrailPickerCard } from './ui/TrailPickerCard';
+import { TrailPickerCard, type HikeMode } from './ui/TrailPickerCard';
 import type { DestinationChoice } from './latestPack';
 import { useLatestPack } from './useLatestPack';
 
@@ -183,6 +190,8 @@ function DestinationMap({
   useDeviationAlerts(hike?.id ?? null, deviation, taskOwned);
   // Group Hike Alerts (#24): this phone's own Alerts out, other members' Alerts in.
   useSelfAlerts(hike?.id ?? null, deviation, position, taskOwned);
+  // Group Hike (#23): this phone's dot on the other members' maps.
+  useGroupPositionSharing(hike ? position : null);
   const sa = useStrings(alertStrings);
   const memberRecords = useMembers();
   const members = useMemo<MapMember[]>(
@@ -216,6 +225,9 @@ function DestinationMap({
   const [notice, setNotice] = useState<string | null>(null);
   const [pickedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [simulate, setSimulate] = useState(false);
+  const [mode, setMode] = useState<HikeMode>('solo');
+  const [memberName, setMemberName] = useMemberName();
+  const [scanning, setScanning] = useState(false);
   // The Hike whose map the hiker moved by hand; following resumes on re-center. Every Hike
   // starts in follow mode.
   const [unfollowedHikeId, setUnfollowedHikeId] = useState<number | null>(null);
@@ -242,9 +254,11 @@ function DestinationMap({
   }, [notice]);
 
   const start = useCallback(
-    (trailId: string | null, options: { simulated: boolean; speed?: number; startFraction?: number; backgroundDelay?: number }) => {
+    // Resolves once the background-location explanation (#62) is answered, or at once when
+    // there is none, so a Group Hike's QR sheet (#23) never opens on top of it.
+    (trailId: string | null, options: { simulated: boolean; speed?: number; startFraction?: number; backgroundDelay?: number }): Promise<void> => {
       const chosen = trailId ? entries.get(trailId) : undefined;
-      if (!chosen) return;
+      if (!chosen) return Promise.resolve();
       startHike({
         destinationId: pack.destination.id,
         trailId: chosen.trail.id,
@@ -253,11 +267,13 @@ function DestinationMap({
       });
       const id = hikeStore.getSnapshot().hike?.id;
       if ((!options.simulated || options.backgroundDelay !== undefined) && Platform.OS === 'android' && id != null) {
-        Alert.alert(s.backgroundTitle, s.backgroundRationale, [
+        return new Promise<void>((answered) => Alert.alert(s.backgroundTitle, s.backgroundRationale, [
           { text: s.notNow, style: 'cancel', onPress: () => {
-            if (hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
+            if (hikeStore.getSnapshot().hike?.id !== id) return answered();
+            Alert.alert(s.backgroundFallback, undefined, [{ text: s.okay, onPress: () => answered() }], { onDismiss: answered });
           } },
           { text: s.allowLocation, onPress: () => {
+            answered();
             if (hikeStore.getSnapshot().hike?.id !== id) return;
             const active = hikeStore.getSnapshot().hike;
             if (!active || active.id !== id) return;
@@ -272,8 +288,9 @@ function DestinationMap({
                 if (hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
               });
           } },
-        ]);
+        ], { onDismiss: answered }));
       }
+      return Promise.resolve();
     },
     [entries, pack.destination.id, s],
   );
@@ -293,6 +310,41 @@ function DestinationMap({
       clearPendingSimulation();
     }
   }, [pendingSimulation, entries, pickable, start]);
+
+  // Group Hike (#23). The nearby-devices permission is asked before the Hike starts, and the
+  // group starts after the background-location explanation (#62) is answered, so no dialog
+  // or QR sheet stacks on another.
+  const groupReady = useCallback(async () => {
+    if (!groupHikeAvailable()) {
+      Alert.alert(sa.groupTitle, sa.groupErrorUnavailable);
+      return false;
+    }
+    if (!(await requestNearbyPermissions().catch(() => false))) {
+      Alert.alert(sa.groupTitle, sa.groupErrorPermission);
+      return false;
+    }
+    return true;
+  }, [sa.groupErrorPermission, sa.groupErrorUnavailable, sa.groupTitle]);
+
+  const startGroup = useCallback(async () => {
+    if (!(await groupReady())) return;
+    const asked = start(selectedTrailId, { simulated: simulate });
+    const id = hikeStore.getSnapshot().hike?.id;
+    await asked;
+    if (id != null && hikeStore.getSnapshot().hike?.id === id) void groupSession.lead(id, memberName);
+  }, [groupReady, start, selectedTrailId, simulate, memberName]);
+
+  const joinScanned = useCallback(
+    async (qr: string) => {
+      setScanning(false);
+      if (!(await groupReady())) return;
+      const asked = start(selectedTrailId, { simulated: simulate });
+      const id = hikeStore.getSnapshot().hike?.id;
+      await asked;
+      if (id != null && hikeStore.getSnapshot().hike?.id === id) void groupSession.join(id, memberName, qr);
+    },
+    [groupReady, start, selectedTrailId, simulate, memberName],
+  );
 
   const recenter = useCallback(async () => {
     setUnfollowedHikeId(null);
@@ -389,6 +441,7 @@ function DestinationMap({
           <>
             {view?.suggestEnd ? <EndSuggestion onEnd={endHike} onDismiss={dismiss} /> : null}
             {hike.simulation ? null : <SimulatedMemberControls card onAdd={addMember} />}
+            <GroupHikeCard hikeId={hike.id} />
             <HikePanel destinationId={pack.destination.id} trailName={entry.trail.name} view={view} onEnd={confirmEnd} />
           </>
         ) : (
@@ -405,9 +458,16 @@ function DestinationMap({
             simulate={simulate}
             onSimulateChange={setSimulate}
             onStart={() => start(selectedTrailId, { simulated: simulate })}
+            mode={mode}
+            onModeChange={setMode}
+            memberName={memberName}
+            onMemberNameChange={setMemberName}
+            onStartGroup={() => void startGroup()}
+            onJoinGroup={() => setScanning(true)}
           />
         )}
       </MapControls>
+      <JoinScanner visible={scanning} onClose={() => setScanning(false)} onScanned={(qr) => void joinScanned(qr)} />
     </View>
   );
 }

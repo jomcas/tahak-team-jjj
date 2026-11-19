@@ -92,6 +92,20 @@ module.exports = {
           enableBackgroundPlayback: false,
         },
       ],
+      [
+        'expo-camera',
+        {
+          // The Group Hike's QR scanner (#23). CameraView reads QR codes with ML Kit's bundled
+          // barcode model (com.google.mlkit:barcode-scanning), so it works offline. No video,
+          // so no microphone.
+          cameraPermission: 'Tahak uses the camera to scan a Group Hike QR code.',
+          microphonePermission: false,
+          recordAudioAndroid: false,
+        },
+      ],
+      // Google Nearby Connections for the Group Hike (#23): Bluetooth, Wi-Fi and nearby-devices
+      // permissions, offline (ADR 0002). See the plugin for the list and its source.
+      './plugins/withNearbyPermissions',
       './plugins/withArm64Only',
       './plugins/withLlamaRnVariants',
     ],
