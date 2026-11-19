@@ -22,6 +22,7 @@ const ERROR_TEXT: Record<GroupSessionError, keyof Strings> = {
   permission: 'groupErrorPermission',
   radio: 'groupErrorRadio',
   'bad-code': 'groupErrorBadCode',
+  full: 'groupErrorFull',
 };
 
 /** The one line that says where this phone's Group Hike stands. */

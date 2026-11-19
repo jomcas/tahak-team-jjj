@@ -55,6 +55,7 @@ function alertOf(memberId: string, memberName: string, extra: Partial<Alert> = {
 
 describe('Group Hike messages', () => {
   const messages: GroupMessage[] = [
+    { v: 1, kind: 'full', hikeId: 'gh-abcd1234' },
     { v: 1, kind: 'hello', hikeId: 'gh-abcd1234', secret: 'K7PM3Q', member: { id: 'm-ana', name: 'Ana' } },
     {
       v: 1,
@@ -464,4 +465,23 @@ describe('NearbyTransport (in-memory Nearby, not real phones)', () => {
     assert.equal(got.length, 1);
     assert.equal(got[0].simulated, true);
   });
+});
+
+test('unknown message kinds are ignored', () => {
+  assert.equal(decodeGroupMessage(JSON.stringify({ v: 1, kind: 'future', hikeId: 'gh-abcd1234' })), null);
+});
+
+test('an existing member reconnects into its slot when full', async () => {
+  const air = new FakeAir();
+  const leader = phone(air, 'leader-reconnect', 'Leader', 1);
+  const qr = await leader.transport.lead('gh-4fk2p9xa');
+  const members = Array.from({ length: 19 }, (_, i) => phone(air, `reconnect-${i}`, 'Member', i + 2));
+  for (const member of members) await member.transport.join(qr);
+  await settle();
+  const replacement = new NearbyTransport({ link: air.add('replacement'), self: { id: 'reconnect-0', name: 'Member' }, random: seeded(900), log: () => {} });
+  await replacement.join(qr);
+  await settle();
+  assert.equal(replacement.getGroup().status, 'joined');
+  assert.equal(Object.keys(leader.transport.getGroup().members).length, MAX_MEMBERS);
+  await leader.transport.endHike();
 });

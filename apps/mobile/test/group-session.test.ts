@@ -488,3 +488,22 @@ describe('Group Hike is no longer "coming soon"', () => {
     assert.equal(fil.startGroupHike, 'Simulan ang Group Hike');
   });
 });
+
+test('a full Group Hike refuses the next phone while its Hike continues', async () => {
+  const air = new FakeAir();
+  const leader = groupPhone(air, 'leader-full', 100);
+  await leader.session.lead(7, 'Leader');
+  const qr = leader.session.getSnapshot().qr!;
+  const members = Array.from({ length: 19 }, (_, i) => groupPhone(air, `full-${i}`, i + 200));
+  for (const member of members) await member.session.join(7, 'Member', qr);
+  await settle();
+  assert.equal(Object.keys(leader.session.getSnapshot().group!.members).length, 20);
+  const extra = groupPhone(air, 'extra', 500);
+  await extra.session.join(8, 'Extra', qr);
+  await settle();
+  assert.equal(extra.session.getSnapshot().error, 'full');
+  assert.equal(extra.session.getSnapshot().group?.endReason, 'full');
+  assert.equal(extra.session.getSnapshot().hikeId, 8);
+  assert.equal(Object.keys(leader.session.getSnapshot().group!.members).length, 20);
+  await leader.session.end();
+});
