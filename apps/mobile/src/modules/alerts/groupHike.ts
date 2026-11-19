@@ -22,7 +22,7 @@ export type GroupRole = 'leader' | 'member';
 export type GroupStatus = 'none' | 'leading' | 'joining' | 'joined' | 'dissolved';
 
 /** Why a group dissolved. */
-export type GroupEndReason = 'hike-ended' | 'left' | 'leader-ended' | 'leader-lost';
+export type GroupEndReason = 'hike-ended' | 'left' | 'leader-ended' | 'leader-lost' | 'full';
 
 export type GroupHike = {
   status: GroupStatus;
