@@ -159,6 +159,9 @@ function useHikeTracking(hikeId: number | null, entry: TrailEntry | null, positi
 }
 
 /** The map of one Destination with the hiker's position, and the Hike on top of it. */
+/** The demo Hike panel's height limit, as a share of the window height. */
+const DEMO_PANEL_MAX = 0.4;
+
 function DestinationMap({
   pack,
   choices,
@@ -435,7 +438,10 @@ function DestinationMap({
         onLayout={onBottomLayout}
       >
         {hike && entry ? (
-          <ScrollView style={{ maxHeight: height * 0.3 }} nestedScrollEnabled>
+          // The demo setup (a simulated walk, often with the Group Hike card and the simulated
+          // member) can outgrow the screen: cap it so a band of map stays visible, and scroll.
+          // A normal Hike keeps its full panel, so End Hike never scrolls out of sight.
+          <ScrollView style={hike.simulation ? { maxHeight: height * DEMO_PANEL_MAX } : undefined} nestedScrollEnabled>
             {view?.suggestEnd ? <EndSuggestion onEnd={endHike} onDismiss={dismiss} /> : null}
             {hike.simulation ? null : <SimulatedMemberControls card onAdd={addMember} />}
             <GroupHikeCard hikeId={hike.id} />

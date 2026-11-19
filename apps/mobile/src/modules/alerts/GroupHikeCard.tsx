@@ -176,8 +176,10 @@ export function GroupHikeCard({ hikeId }: { hikeId: number }) {
         </ScrollView>
       ) : null}
 
-      {expanded ? <View style={styles.actions}>
-        {qr && role === 'leader' && group?.status === 'leading' ? (
+      {/* Leave and Try again stay one tap away; only the QR text button waits for "details",
+          since the header has a QR icon button. */}
+      <View style={styles.actions}>
+        {expanded && qr && role === 'leader' && group?.status === 'leading' ? (
           <SmallButton label={s.groupShowQr} icon="qrcode" onPress={() => setQrOpen(true)} />
         ) : null}
         {error && error !== 'unavailable' ? (
@@ -191,7 +193,7 @@ export function GroupHikeCard({ hikeId }: { hikeId: number }) {
             onPress={() => void groupSession.end()}
           />
         ) : null}
-      </View> : null}
+      </View>
 
       <GroupSheet visible={qrOpen && qr !== null} onClose={() => setQrOpen(false)} title={s.qrTitle} closeLabel={s.close}>
         {qr ? <QrCode text={qr} size={260} accessibilityLabel={fill(s.qrLabel, { code: joinCode })} /> : null}
