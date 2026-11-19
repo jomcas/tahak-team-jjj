@@ -13,7 +13,7 @@ module.exports = {
     name: 'Tahak',
     slug: 'tahak',
     scheme: 'tahak',
-    version: '1.1.0',
+    version: '1.1.1',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -24,7 +24,7 @@ module.exports = {
     android: {
       package: 'com.tahak.app',
       // Raise by one for every release APK, so it installs as an update (v1.0.0 was 1).
-      versionCode: 2,
+      versionCode: 3,
       adaptiveIcon: {
         backgroundColor: PAGE_DAY,
         foregroundImage: './assets/android-icon-foreground.png',
