@@ -8,7 +8,7 @@ import { textStyles } from '../../theme/typography';
 import { fill } from '../hike/format';
 import { memberList, type GroupHike } from './groupHike';
 import { groupSession, useGroupSession } from './groupHikeService';
-import { decodeJoinCode } from './groupMessage';
+import { decodeJoinCode, MAX_MEMBERS } from './groupMessage';
 import type { GroupSessionError } from './groupSession';
 import { initials } from './memberState';
 import { QrCode } from './QrCode';
@@ -22,7 +22,13 @@ const ERROR_TEXT: Record<GroupSessionError, keyof Strings> = {
   permission: 'groupErrorPermission',
   radio: 'groupErrorRadio',
   'bad-code': 'groupErrorBadCode',
+  full: 'groupErrorFull',
 };
+
+/** The text for a Group Hike error; the full-group one names the member limit. */
+export function groupErrorText(s: Strings, error: GroupSessionError): string {
+  return fill(s[ERROR_TEXT[error]], { count: String(MAX_MEMBERS) });
+}
 
 /** The one line that says where this phone's Group Hike stands. */
 export function groupStatusText(s: Strings, group: GroupHike | null, busy: boolean): string {
@@ -36,6 +42,7 @@ export function groupStatusText(s: Strings, group: GroupHike | null, busy: boole
     case 'joined':
       return fill(s.groupJoined, { count });
     case 'dissolved':
+      if (group.endReason === 'full') return groupErrorText(s, 'full');
       return group.endReason === 'leader-lost' ? s.groupLeaderLost : s.groupEndedByLeader;
     default:
       return s.groupStarting;
@@ -141,7 +148,7 @@ export function GroupHikeCard({ hikeId }: { hikeId: number }) {
         <View style={styles.grow}>
           <Text style={[textStyles.labelStrong, { color: colors.muted }]}>{s.groupTitle}</Text>
           <Text accessibilityLiveRegion="polite" style={[textStyles.bodyStrong, { color: colors.ink }]}>
-            {error ? s[ERROR_TEXT[error]] : groupStatusText(s, group, busy)}
+            {error ? groupErrorText(s, error) : groupStatusText(s, group, busy)}
           </Text>
         </View>
         {busy || group?.status === 'joining' ? <ActivityIndicator color={colors.primary} /> : null}

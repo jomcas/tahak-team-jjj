@@ -32,7 +32,8 @@ export type GroupMessage =
   /** A member left (they ended their Hike, or the leader saw them disconnect). */
   | { v: 1; kind: 'leave'; hikeId: string; memberId: string }
   /** The leader ended the Hike: the group dissolves for everyone. */
-  | { v: 1; kind: 'end'; hikeId: string };
+  | { v: 1; kind: 'end'; hikeId: string }
+  | { v: 1; kind: 'full'; hikeId: string };
 
 export type GroupMessageKind = GroupMessage['kind'];
 
@@ -159,6 +160,8 @@ export function decodeGroupMessage(text: string): GroupMessage | null {
     }
     case 'leave':
       return isId(raw.memberId) ? { v: 1, kind: 'leave', hikeId, memberId: raw.memberId } : null;
+    case 'full':
+      return { v: 1, kind: 'full', hikeId };
     case 'end':
       return { v: 1, kind: 'end', hikeId };
     default:

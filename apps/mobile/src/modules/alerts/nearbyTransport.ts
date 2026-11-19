@@ -105,6 +105,7 @@ export class NearbyTransport implements AlertTransport {
 
   /** Leader: connected endpoints → the member id they proved, or null while awaiting hello. */
   private readonly endpoints = new Map<string, string | null>();
+  private readonly refusing = new Set<string>();
   private readonly helloTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Member: the leader's endpoint once found, and once connected. */
   private requestedLeader: string | null = null;
@@ -341,9 +342,22 @@ export class NearbyTransport implements AlertTransport {
     if (this.group.status !== 'leading' || !this.endpoints.has(endpointId)) return;
     const memberId = this.endpoints.get(endpointId) ?? null;
     if (memberId === null) {
+      if (this.refusing.has(endpointId)) return;
       if (message.kind !== 'hello') return;
-      if (message.secret !== this.secret || !canAdmit(this.group, message.member)) {
-        this.drop(endpointId, 'wrong secret or group full');
+      if (message.secret !== this.secret) {
+        this.drop(endpointId, 'wrong secret');
+        return;
+      }
+      if (!canAdmit(this.group, message.member)) {
+        if (message.member.id === this.group.self.id) {
+          this.drop(endpointId, 'duplicate leader');
+          return;
+        }
+        this.refusing.add(endpointId);
+        this.clearHelloTimer(endpointId);
+        void this.sendTo([endpointId], { v: 1, kind: 'full', hikeId: message.hikeId }).then(() => {
+          if (this.refusing.has(endpointId)) this.helloTimers.set(endpointId, setTimeout(() => this.drop(endpointId, 'group full'), this.helloTimeoutMs));
+        });
         return;
       }
       // The same member on a new connection replaces the old one.
@@ -401,6 +415,11 @@ export class NearbyTransport implements AlertTransport {
         }
         return;
       }
+      case 'full':
+        if (this.group.status !== 'joining') return;
+        this.finish('full');
+        this.link.stopAll();
+        return;
       case 'end':
         this.log('the leader ended the Hike; the group has ended');
         this.finish('leader-ended');
@@ -485,6 +504,7 @@ export class NearbyTransport implements AlertTransport {
 
   private forget(endpointId: string) {
     this.endpoints.delete(endpointId);
+    this.refusing.delete(endpointId);
     this.clearHelloTimer(endpointId);
   }
 
@@ -511,6 +531,7 @@ export class NearbyTransport implements AlertTransport {
     this.subscriptions = [];
     this.helloTimers.forEach((timer) => clearTimeout(timer));
     this.helloTimers.clear();
+    this.refusing.clear();
   }
 
   /** The group is over: every other member leaves this phone's map. */

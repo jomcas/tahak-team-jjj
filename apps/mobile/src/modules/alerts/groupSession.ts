@@ -20,7 +20,7 @@ import type { AlertPosition } from './types.ts';
  * - `radio`: Nearby could not advertise or discover (usually Bluetooth or Wi-Fi is off).
  * - `bad-code`: the scanned QR code is not a Tahak Group Hike.
  */
-export type GroupSessionError = 'unavailable' | 'permission' | 'radio' | 'bad-code';
+export type GroupSessionError = 'unavailable' | 'permission' | 'radio' | 'bad-code' | 'full';
 
 export type GroupSessionView = {
   /** The Hike this Group Hike belongs to, or null with no Group Hike. */
@@ -173,7 +173,7 @@ export function createGroupSession(deps: GroupSessionDeps) {
           // The leader ended the Hike, or this phone lost them: back to the loopback alone,
           // and the card says why until this Hike ends.
           release();
-          set({ group, qr: null, busy: false });
+          set({ group, qr: null, busy: false, error: group.endReason === 'full' ? 'full' : null });
           return;
         }
         set({ group });
