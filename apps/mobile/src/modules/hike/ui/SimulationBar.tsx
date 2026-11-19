@@ -60,17 +60,18 @@ export function SimulationBar({
           style={({ pressed }) => [styles.button, { backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 }]}
         >
           <MaterialCommunityIcons name={sim.paused ? 'play' : 'pause'} size={18} color={colors.ink} />
-
         </Pressable>
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={fill(s.simulationSpeed, { speed: nextSpeed })}
           accessibilityHint={s.simulationSpeedHint}
           onPress={() => walk.setSpeed(nextSpeed)}
           style={({ pressed }) => [styles.button, { backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 }]}
         >
           <MaterialCommunityIcons name="fast-forward" size={18} color={colors.ink} />
           <Text style={[textStyles.labelStrong, styles.numbers, { color: colors.ink }]}>
-            {fill(s.simulationSpeed, { speed: nextSpeed })}
+            {/* Just "60×" on screen, so the bar's title fits on one row; the label says it all. */}
+            {fill(s.simulationSpeedShort, { speed: nextSpeed })}
           </Text>
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={expanded ? s.demoCollapse : s.demoExpand} accessibilityState={{ expanded: showDemoDetails(expanded, alertActive) }} onPress={() => setExpanded(!expanded)} style={styles.toggle}>

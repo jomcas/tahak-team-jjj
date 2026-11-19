@@ -72,6 +72,7 @@ const en = {
   simulationNote: 'Not your real position.',
   // The button shows the speed it switches to, not the current one (the title says that).
   simulationSpeed: 'Switch to {speed}×',
+  simulationSpeedShort: '{speed}×',
   simulationSpeedHint: 'Change how fast the simulated walk goes',
   simulationPause: 'Pause',
   simulationResume: 'Resume',
@@ -182,6 +183,7 @@ const fil: Record<keyof typeof en, string> = {
   simulationRunning: 'Kunwaring lakad · {speed}×',
   simulationNote: 'Hindi ito ang totoong kinaroroonan mo.',
   simulationSpeed: 'Gawing {speed}×',
+  simulationSpeedShort: '{speed}×',
   simulationSpeedHint: 'Palitan ang bilis ng kunwaring lakad',
   simulationPause: 'Ihinto',
   simulationResume: 'Ituloy',
