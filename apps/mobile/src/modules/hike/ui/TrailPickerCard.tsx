@@ -289,13 +289,13 @@ export function TrailPickerCard({
       )}
 
       <View style={styles.simRow}>
-        <MaterialCommunityIcons name="walk" size={22} color={colors.onSky} />
-        <View style={styles.grow}>
-          <Text style={[textStyles.bodyStrong, { color: colors.ink }]}>{s.simulatedWalk}</Text>
-          <Text style={[textStyles.label, { color: colors.muted }]}>{s.simulatedWalkHint}</Text>
-        </View>
+        {/* A demo aid, so it stays quiet: one muted line, the explanation read out as a hint. */}
+        <MaterialCommunityIcons name="walk" size={16} color={colors.muted} />
+        <Text style={[textStyles.label, styles.grow, { color: colors.muted }]}>{s.simulatedWalk}</Text>
         <Switch
           accessibilityLabel={s.simulatedWalk}
+          accessibilityHint={s.simulatedWalkHint}
+          style={styles.simSwitch}
           value={simulate}
           onValueChange={onSimulateChange}
           trackColor={{ false: colors.line, true: colors.sky }}
@@ -413,6 +413,9 @@ const styles = StyleSheet.create({
   simRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
+  },
+  simSwitch: {
+    transform: [{ scale: 0.8 }],
   },
 });
