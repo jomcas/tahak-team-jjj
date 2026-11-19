@@ -1,4 +1,4 @@
-import { MAX_MEMBERS } from './groupMessage.ts';
+// This module's own UI text. Pure data with no imports (see src/i18n/types.ts).
 
 const en = {
   // A simulated member is labelled as such everywhere it appears.
@@ -34,7 +34,7 @@ const en = {
   groupErrorUnavailable: 'This phone or build of Tahak can’t link phones.',
   groupErrorPermission: 'Allow “Nearby devices” for Tahak to link phones.',
   groupErrorRadio: 'Couldn’t reach phones nearby. Turn on Bluetooth and Wi-Fi, then try again.',
-  groupErrorFull: `This Group Hike is full (${MAX_MEMBERS} phones). Ask the leader to start another group.`,
+  groupErrorFull: 'This Group Hike is full ({count} phones). Ask the leader to start another group.',
   groupErrorBadCode: 'That QR code isn’t a Tahak Group Hike.',
   groupTryAgain: 'Try again',
   groupShowQr: 'Show QR code',
@@ -85,7 +85,7 @@ const fil = {
   groupErrorUnavailable: 'Hindi kayang ikonekta ng phone o build na ito ng Tahak ang mga phone.',
   groupErrorPermission: 'Payagan ang “Nearby devices” para sa Tahak para maikonekta ang mga phone.',
   groupErrorRadio: 'Walang maabot na phone sa malapit. Buksan ang Bluetooth at Wi-Fi, saka subukan ulit.',
-  groupErrorFull: `Puno na ang Group Hike na ito (${MAX_MEMBERS} na phone). Hilingin sa lider na magsimula ng isa pang grupo.`,
+  groupErrorFull: 'Puno na ang Group Hike na ito ({count} na phone). Hilingin sa lider na magsimula ng isa pang grupo.',
   groupErrorBadCode: 'Hindi Group Hike ng Tahak ang QR code na iyan.',
   groupTryAgain: 'Subukan ulit',
   groupShowQr: 'Ipakita ang QR code',

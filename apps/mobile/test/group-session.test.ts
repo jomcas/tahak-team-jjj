@@ -33,6 +33,8 @@ import { isDarkAt, qrMatrix } from '../src/modules/alerts/qrMatrix.ts';
 import { createLoopbackPair, GroupTransport, type AlertTransport } from '../src/modules/alerts/transport.ts';
 import type { Alert, MemberPosition } from '../src/modules/alerts/types.ts';
 import hikeStrings from '../src/modules/hike/strings.ts';
+import alertStrings from '../src/modules/alerts/strings.ts';
+import { MAX_MEMBERS } from '../src/modules/alerts/groupMessage.ts';
 import { FakeAir, type FakeLink } from './fixtures/fakeNearby.ts';
 
 const require = createRequire(import.meta.url);
@@ -506,4 +508,13 @@ test('a full Group Hike refuses the next phone while its Hike continues', async 
   assert.equal(extra.session.getSnapshot().hikeId, 8);
   assert.equal(Object.keys(leader.session.getSnapshot().group!.members).length, 20);
   await leader.session.end();
+});
+
+test('the full-group message names the member limit in both languages, without "ended" or "lost"', () => {
+  for (const lang of ['en', 'fil'] as const) {
+    const text = alertStrings[lang].groupErrorFull;
+    assert.match(text, /\{count\}/, `${lang} keeps the limit as a placeholder`);
+    assert.ok(text.replace('{count}', String(MAX_MEMBERS)).includes('20'));
+  }
+  assert.doesNotMatch(alertStrings.en.groupErrorFull, /ended|lost/i);
 });
