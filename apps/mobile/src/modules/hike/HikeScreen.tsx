@@ -2,7 +2,7 @@ import { buildBenchTimeline } from './simulate/benchSample';
 import { useIsFocused } from '@react-navigation/native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 
 import { EmptyState } from '../../shell/EmptyState';
 import { useStrings, useTheme } from '../../settings/preferences';
@@ -169,6 +169,7 @@ function DestinationMap({
   onChooseDestination: (destinationId: string) => void;
 }) {
   const s = useStrings(strings);
+  const { height } = useWindowDimensions();
   const focused = useIsFocused();
   const { hike: anyHike, pendingSimulation } = useSyncExternalStore(hikeStore.subscribe, hikeStore.getSnapshot);
   const entries = useMemo(() => trailEntries(pack), [pack]);
@@ -413,11 +414,6 @@ function DestinationMap({
       {hike ? <KeepScreenOn /> : null}
       {showTop ? (
         <View style={styles.top} onLayout={onTopLayout}>
-          {hike?.simulation ? (
-            <SimulationBar walk={hike.simulation} offTrailM={offTrailM}>
-              <SimulatedMemberControls onAdd={addMember} />
-            </SimulationBar>
-          ) : null}
           {deviation ? (
             <DeviationBanner
               offTrailM={deviation.toTrail.offTrailM}
@@ -426,6 +422,7 @@ function DestinationMap({
             />
           ) : null}
           <GroupAlertBanners onShowOnMap={showMember} />
+          {hike?.simulation ? <SimulationBar walk={hike.simulation} offTrailM={offTrailM} alertActive={deviation !== null || membersAlerting}><SimulatedMemberControls onAdd={addMember} /></SimulationBar> : null}
         </View>
       ) : null}
       <MapControls
@@ -438,12 +435,12 @@ function DestinationMap({
         onLayout={onBottomLayout}
       >
         {hike && entry ? (
-          <>
+          <ScrollView style={{ maxHeight: height * 0.3 }} nestedScrollEnabled>
             {view?.suggestEnd ? <EndSuggestion onEnd={endHike} onDismiss={dismiss} /> : null}
             {hike.simulation ? null : <SimulatedMemberControls card onAdd={addMember} />}
             <GroupHikeCard hikeId={hike.id} />
             <HikePanel destinationId={pack.destination.id} trailName={entry.trail.name} view={view} onEnd={confirmEnd} />
-          </>
+          </ScrollView>
         ) : (
           <TrailPickerCard
             destinationId={pack.destination.id}

@@ -119,6 +119,7 @@ export function GroupHikeCard({ hikeId }: { hikeId: number }) {
   const view = useGroupSession();
   // The QR code the sheet is open for. The leader's opens by itself once, as soon as the
   // group is advertising (React's pattern for state that follows a changing value).
+  const [expanded, setExpanded] = useState(false);
   const [openFor, setOpenFor] = useState<string | null>(null);
   const [seenQr, setSeenQr] = useState<string | null>(null);
   if (view.qr !== seenQr) {
@@ -144,6 +145,8 @@ export function GroupHikeCard({ hikeId }: { hikeId: number }) {
             {error ? s[ERROR_TEXT[error]] : groupStatusText(s, group, busy)}
           </Text>
         </View>
+        {qr && role === 'leader' && group?.status === 'leading' ? <Pressable accessibilityRole="button" accessibilityLabel={s.groupShowQr} onPress={() => setQrOpen(true)} style={styles.iconButton}><MaterialCommunityIcons name="qrcode" size={22} color={colors.primary} /></Pressable> : null}
+        <Pressable accessibilityRole="button" accessibilityLabel={expanded ? s.groupCollapse : s.groupExpand} accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={styles.iconButton}><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={22} color={colors.primary} /></Pressable>
         {busy || group?.status === 'joining' ? <ActivityIndicator color={colors.primary} /> : null}
       </View>
 
@@ -154,19 +157,19 @@ export function GroupHikeCard({ hikeId }: { hikeId: number }) {
               <View style={[styles.dot, { backgroundColor: colors.primary }]}>
                 <Text style={[textStyles.labelStrong, { color: colors.onPrimary }]}>{initials(member.name)}</Text>
               </View>
-              <Text numberOfLines={1} style={[textStyles.label, { color: colors.ink }]}>
+              {expanded ? <Text numberOfLines={1} style={[textStyles.label, { color: colors.ink }]}>
                 {member.isSelf
                   ? fill(s.memberYou, { name: member.name })
                   : member.isLeader
                     ? fill(s.memberLeader, { name: member.name })
                     : member.name}
-              </Text>
+              </Text> : null}
             </View>
           ))}
         </ScrollView>
       ) : null}
 
-      <View style={styles.actions}>
+      {expanded ? <View style={styles.actions}>
         {qr && role === 'leader' && group?.status === 'leading' ? (
           <SmallButton label={s.groupShowQr} icon="qrcode" onPress={() => setQrOpen(true)} />
         ) : null}
@@ -181,7 +184,7 @@ export function GroupHikeCard({ hikeId }: { hikeId: number }) {
             onPress={() => void groupSession.end()}
           />
         ) : null}
-      </View>
+      </View> : null}
 
       <GroupSheet visible={qrOpen && qr !== null} onClose={() => setQrOpen(false)} title={s.qrTitle} closeLabel={s.close}>
         {qr ? <QrCode text={qr} size={260} accessibilityLabel={fill(s.qrLabel, { code: joinCode })} /> : null}
@@ -193,6 +196,7 @@ export function GroupHikeCard({ hikeId }: { hikeId: number }) {
 }
 
 const styles = StyleSheet.create({
+  iconButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   card: {
     borderRadius: 14,
     borderWidth: 1,

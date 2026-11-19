@@ -1,6 +1,8 @@
 // This module's own UI text. Pure data with no imports (see src/i18n/types.ts).
 
 const en = {
+  groupExpand: 'Show group details',
+  groupCollapse: 'Hide group details',
   // A simulated member is labelled as such everywhere it appears.
   simulatedName: '{name} (simulated)',
   memberOffTrail: '{name} is off the Trail · {distance}',
@@ -55,6 +57,8 @@ const en = {
 };
 
 const fil = {
+  groupExpand: 'Ipakita ang detalye ng grupo',
+  groupCollapse: 'Itago ang detalye ng grupo',
   simulatedName: '{name} (kunwari)',
   memberOffTrail: 'Lihis sa Trail si {name} · {distance}',
   memberOffTrailNoDistance: 'Lihis sa Trail si {name}',
