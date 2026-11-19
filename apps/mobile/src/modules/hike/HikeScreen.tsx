@@ -254,9 +254,11 @@ function DestinationMap({
   }, [notice]);
 
   const start = useCallback(
-    (trailId: string | null, options: { simulated: boolean; speed?: number; startFraction?: number; backgroundDelay?: number }) => {
+    // Resolves once the background-location explanation (#62) is answered, or at once when
+    // there is none, so a Group Hike's QR sheet (#23) never opens on top of it.
+    (trailId: string | null, options: { simulated: boolean; speed?: number; startFraction?: number; backgroundDelay?: number }): Promise<void> => {
       const chosen = trailId ? entries.get(trailId) : undefined;
-      if (!chosen) return;
+      if (!chosen) return Promise.resolve();
       startHike({
         destinationId: pack.destination.id,
         trailId: chosen.trail.id,
@@ -265,11 +267,13 @@ function DestinationMap({
       });
       const id = hikeStore.getSnapshot().hike?.id;
       if ((!options.simulated || options.backgroundDelay !== undefined) && Platform.OS === 'android' && id != null) {
-        Alert.alert(s.backgroundTitle, s.backgroundRationale, [
+        return new Promise<void>((answered) => Alert.alert(s.backgroundTitle, s.backgroundRationale, [
           { text: s.notNow, style: 'cancel', onPress: () => {
-            if (hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
+            if (hikeStore.getSnapshot().hike?.id !== id) return answered();
+            Alert.alert(s.backgroundFallback, undefined, [{ text: s.okay, onPress: () => answered() }], { onDismiss: answered });
           } },
           { text: s.allowLocation, onPress: () => {
+            answered();
             if (hikeStore.getSnapshot().hike?.id !== id) return;
             const active = hikeStore.getSnapshot().hike;
             if (!active || active.id !== id) return;
@@ -284,8 +288,9 @@ function DestinationMap({
                 if (hikeStore.getSnapshot().hike?.id === id) Alert.alert(s.backgroundFallback);
               });
           } },
-        ]);
+        ], { onDismiss: answered }));
       }
+      return Promise.resolve();
     },
     [entries, pack.destination.id, s],
   );
@@ -306,8 +311,9 @@ function DestinationMap({
     }
   }, [pendingSimulation, entries, pickable, start]);
 
-  // Group Hike (#23). The nearby-devices permission is asked before the Hike starts, so its
-  // dialog never stacks with the background-location one (#62).
+  // Group Hike (#23). The nearby-devices permission is asked before the Hike starts, and the
+  // group starts after the background-location explanation (#62) is answered, so no dialog
+  // or QR sheet stacks on another.
   const groupReady = useCallback(async () => {
     if (!groupHikeAvailable()) {
       Alert.alert(sa.groupTitle, sa.groupErrorUnavailable);
@@ -322,18 +328,20 @@ function DestinationMap({
 
   const startGroup = useCallback(async () => {
     if (!(await groupReady())) return;
-    start(selectedTrailId, { simulated: simulate });
+    const asked = start(selectedTrailId, { simulated: simulate });
     const id = hikeStore.getSnapshot().hike?.id;
-    if (id != null) void groupSession.lead(id, memberName);
+    await asked;
+    if (id != null && hikeStore.getSnapshot().hike?.id === id) void groupSession.lead(id, memberName);
   }, [groupReady, start, selectedTrailId, simulate, memberName]);
 
   const joinScanned = useCallback(
     async (qr: string) => {
       setScanning(false);
       if (!(await groupReady())) return;
-      start(selectedTrailId, { simulated: simulate });
+      const asked = start(selectedTrailId, { simulated: simulate });
       const id = hikeStore.getSnapshot().hike?.id;
-      if (id != null) void groupSession.join(id, memberName, qr);
+      await asked;
+      if (id != null && hikeStore.getSnapshot().hike?.id === id) void groupSession.join(id, memberName, qr);
     },
     [groupReady, start, selectedTrailId, simulate, memberName],
   );

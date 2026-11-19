@@ -99,6 +99,7 @@ const en = {
     'If you’re more than 40 m off the Trail for over 30 seconds, Tahak sounds an alarm and shows a notification, which a paired watch also gets. Android asks next.',
   allowNotifications: 'Allow',
   notNow: 'Not now',
+  okay: 'OK',
   // The Assistant's distance tool (issue #19), shown in the Ask tab.
   toolDescription:
     'During a Hike: the distance along the Trail and the ETA to the next Waypoint, or to the next one of a type (campsite, water, summit, jump-off).',
@@ -204,6 +205,7 @@ const fil: Record<keyof typeof en, string> = {
     'Kapag lampas 40 m ka sa labas ng Trail nang higit 30 segundo, tutunog ang alarma ng Tahak at magpapakita ito ng notification, na matatanggap din ng naka-pair na relo. Susunod na magtatanong ang Android.',
   allowNotifications: 'Payagan',
   notNow: 'Hindi muna',
+  okay: 'Sige',
   toolDescription:
     'Habang naka-Hike: ang layo sa Trail at ETA papunta sa susunod na Waypoint, o sa susunod na isang uri nito (campsite, tubig, tuktok, jump-off).',
   toolTitle: 'Mula sa Hike mo',
